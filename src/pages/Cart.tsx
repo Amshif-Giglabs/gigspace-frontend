@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import Invoice from '@/components/Invoice'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -36,6 +37,7 @@ export default function CartPage() {
   const [otp, setOtp] = useState('')
   const [otpVerified, setOtpVerified] = useState(false)
   const [invoiceOpen, setInvoiceOpen] = useState(true)
+  const [showInvoice, setShowInvoice] = useState(false)
 
   const subtotal = slots.length * price
   const tax = +(subtotal * 0.1).toFixed(2) // simple 10% tax
@@ -59,15 +61,35 @@ export default function CartPage() {
     toast({ title: 'OTP verified', description: 'Your OTP has been verified successfully.' })
   }
 
+  const handleInvoiceClose = () => {
+    setShowInvoice(false)
+    navigate('/')
+  }
+
+  const handleInvoiceDownload = () => {
+    toast({ title: 'Download started', description: 'Invoice download will begin shortly.' })
+    // In a real app, this would trigger a PDF download
+  }
+
+  const handleInvoicePrint = () => {
+    toast({ title: 'Print dialog opened', description: 'Use your browser\'s print function.' })
+    window.print()
+  }
+
+  const handleInvoiceEmail = () => {
+    toast({ title: 'Email sent', description: 'Invoice has been sent to your email.' })
+    // In a real app, this would send the invoice via email
+  }
+
   const handleProceedToPay = () => {
     if (showOtp && otp.trim().length < 4) {
       toast({ title: 'Invalid OTP', description: 'Please enter the 4-digit OTP.', variant: 'destructive' })
       return
     }
 
-    // Simulate payment success
+    // Show invoice instead of navigating away
+    setShowInvoice(true)
     toast({ title: 'Payment successful', description: `You have paid ${currency(total)}.` })
-    navigate('/')
   }
 
   return (
@@ -183,6 +205,24 @@ export default function CartPage() {
       </main>
 
       <Footer />
+
+      {/* Invoice Modal */}
+      {showInvoice && (
+        <Invoice
+          customerName={name}
+          customerEmail={email}
+          slots={slots}
+          roomName={roomName}
+          price={price}
+          subtotal={subtotal}
+          tax={tax}
+          total={total}
+          onClose={handleInvoiceClose}
+          onDownload={handleInvoiceDownload}
+          onPrint={handleInvoicePrint}
+          onEmail={handleInvoiceEmail}
+        />
+      )}
     </div>
   )
 }
