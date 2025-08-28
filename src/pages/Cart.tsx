@@ -34,6 +34,7 @@ export default function CartPage() {
   const [email, setEmail] = useState('')
   const [showOtp, setShowOtp] = useState(false)
   const [otp, setOtp] = useState('')
+  const [otpVerified, setOtpVerified] = useState(false)
   const [invoiceOpen, setInvoiceOpen] = useState(true)
 
   const subtotal = slots.length * price
@@ -47,6 +48,15 @@ export default function CartPage() {
     }
     setShowOtp(true)
     toast({ title: 'OTP sent', description: 'A verification code was sent to your email/phone (simulated).' })
+  }
+
+  const handleVerifyOtp = () => {
+    if (otp.trim().length < 4) {
+      toast({ title: 'Invalid OTP', description: 'Please enter the 4-digit OTP.', variant: 'destructive' })
+      return
+    }
+    setOtpVerified(true)
+    toast({ title: 'OTP verified', description: 'Your OTP has been verified successfully.' })
   }
 
   const handleProceedToPay = () => {
@@ -153,47 +163,17 @@ export default function CartPage() {
                           <Label className="mb-1">Enter OTP</Label>
                           <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="1234" />
                         </div>
-                        <div className="flex gap-2">
-                          <Button className="flex-1" onClick={handleProceedToPay}>
-                            Pay {currency(total)}
+                        {!otpVerified ? (
+                          <Button className="w-full" onClick={handleVerifyOtp} disabled={otp.trim().length < 4}>
+                            Verify OTP
                           </Button>
-                          <Button variant="outline" className="flex-1" onClick={() => setShowOtp(false)}>Edit</Button>
-                        </div>
+                        ) : (
+                          <Button className="w-full" onClick={handleProceedToPay}>
+                            Checkout
+                          </Button>
+                        )}
                       </div>
                     )}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4">
-                  <h3 className="text-lg font-medium mb-3">Order summary</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span>Items</span>
-                      <span>{slots.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span>{currency(subtotal)}</span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Tax</span>
-                      <span>{currency(tax)}</span>
-                    </div>
-                  </div>
-
-                  <div className="border-t mt-4 pt-3 flex items-center justify-between">
-                    <div>
-                      <div className="text-sm text-muted-foreground">Total</div>
-                      <div className="text-xl font-semibold">{currency(total)}</div>
-                    </div>
-                  </div>
-
-                  <div className="mt-4">
-                    <Button className="w-full" onClick={() => { if (!showOtp) handleContinue(); else handleProceedToPay(); }} disabled={slots.length === 0}>
-                      {showOtp ? `Pay ${currency(total)}` : 'Checkout'}
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
