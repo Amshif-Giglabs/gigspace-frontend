@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays, isSameDay, addHours, parseISO, isWithinInterval, addMonths, isToday } from "date-fns";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, Star, MapPin, Users, Video, Wifi, Monitor, Printer, Lock, Power, CheckIcon } from "lucide-react";
 import Header from "@/components/Header";
@@ -149,111 +149,138 @@ const MeetingRooms = () => {
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col lg:flex-row gap-8">
-            {/* Left Column: Room Images and Calendar */}
-            <div className="lg:w-2/3 space-y-6">
-              <div className="flex flex-col md:flex-row gap-6">
-                {/* Main Image */}
-                <div className="md:w-1/2">
-                  <div className="rounded-xl overflow-hidden bg-gray-100">
-                    <img
-                      src={mainImage}
-                      alt={selectedRoom.name}
-                      className="w-full h-[300px] object-cover"
-                      loading="eager"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = "/placeholder.svg";
-                      }}
-                    />
-                  </div>
+            {/* Left Column: Main Content */}
+            <div className="lg:w-2/3 pr-0">
+              <div className="grid grid-cols-1 gap-6 w-full">
+                {/* Main Image Grid - 2 Big Images */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {meetingRooms.slice(0, 2).map((room, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-xl overflow-hidden bg-gray-100 cursor-pointer"
+                      onClick={() => setMainImage(room.image)}
+                    >
+                      <img
+                        src={room.image}
+                        alt={room.name}
+                        className="w-full h-64 object-cover"
+                        loading="eager"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "/placeholder.svg";
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
 
-                {/* Calendar */}
-                <div className="md:w-1/2">
-                  <Calendar
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={handleDateSelect}
-                    className="rounded-md border p-4 w-full"
-                    disabled={(date) => date < new Date()}
-                  />
-                </div>
-              </div>
-              
-              {/* Thumbnail Gallery */}
-              <div className="flex gap-3">
-                {[selectedRoom.image, "/src/assets/coworking-space.jpg", "/src/assets/meeting-room.jpg"].map((img, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setMainImage(img)}
-                    className={`w-20 h-16 rounded-md overflow-hidden cursor-pointer border-2 ${mainImage === img ? 'border-primary' : 'border-transparent'}`}
-                  >
-                    <img
-                      src={img}
-                      alt={`Preview ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* Room Info */}
-              <div className="space-y-6 pt-4">
-                <div>
-                  <h2 className="text-2xl font-semibold mb-3">About this space</h2>
-                  <p className="text-muted-foreground">{selectedRoom.description}</p>
+                {/* Small Images Row - 3 Images */}
+                <div className="grid grid-cols-3 gap-4">
+                  {[selectedRoom.image, "/src/assets/coworking-space.jpg", "/src/assets/meeting-room.jpg"].map((img, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setMainImage(img)}
+                      className={`rounded-xl overflow-hidden bg-gray-100 cursor-pointer border-2 transition-colors ${mainImage === img ? 'border-primary' : 'border-transparent hover:border-gray-200'}`}
+                    >
+                      <img
+                        src={img}
+                        alt={`Preview ${idx + 1}`}
+                        className="w-full h-32 object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "/placeholder.svg";
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
 
-                <div>
-                  <h3 className="text-xl font-medium mb-4">Amenities</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedRoom.amenities.map((amenity, idx) => (
-                      <div key={idx} className="flex items-center gap-3">
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                          <CheckIcon className="h-4 w-4 text-primary" />
+                {/* Room Info */}
+                <div className="space-y-6 pt-4">
+                  <div>
+                    <h2 className="text-2xl font-semibold mb-3">About this space</h2>
+                    <p className="text-muted-foreground mb-6">{selectedRoom.description}</p>
+
+                    <h3 className="text-xl font-semibold mb-4">Amenities</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedRoom.amenities.map((amenity, idx) => (
+                        <div key={idx} className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                            <CheckIcon className="h-4 w-4 text-primary" />
+                          </div>
+                          <span className="text-sm">{amenity}</span>
                         </div>
-                        <span className="text-sm">{amenity}</span>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Right Column: Booking Form */}
-            <div className="lg:w-1/3">
-              <div className="sticky top-24">
+            <div className="lg:w-1/3 pl-0">
+              <div className="sticky top-6">
                 <Card className="border-none shadow-lg">
                   <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-6">
-                      <div>
-                        <h2 className="text-2xl font-bold">${selectedRoom.price}<span className="text-base font-normal text-muted-foreground">/hour</span></h2>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium text-lg">{selectedRoom.capacity}</div>
-                        <div className="text-sm text-muted-foreground">people</div>
+                    <div className="mb-6">
+                      <h3 className="text-lg font-medium mb-2">Select Date</h3>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start text-left font-normal"
+                          >
+                            <CalendarIcon className="mr-2 h-4 w-4" />
+                            {selectedDate ? format(selectedDate, "dd/MM/yyyy") : "Pick a date"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate}
+                            onSelect={handleDateSelect}
+                            className="w-full"
+                            disabled={(date) => date < new Date()}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="w-full">
+                        <div className="font-medium text-lg">Capacity: {selectedRoom.capacity}</div>
                       </div>
                     </div>
 
                     {/* Time Slots */}
                     <div className="mb-6">
                       <h3 className="font-medium mb-3">Select Time</h3>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 gap-3">
                         {timeSlots.map((timeSlot, idx) => {
                           const isSelected = isSlotSelected(timeSlot, selectedRoom.id);
+                          const isAvailable = Math.random() > 0.3; // Replace with actual availability check
+
                           return (
                             <Button
                               key={idx}
-                              variant={isSelected ? "default" : "outline"}
-                              className="h-14 flex flex-col items-center justify-center p-2"
-                              onClick={() => handleSlotClick(timeSlot, selectedRoom.id)}
+                              variant="outline"
+                              className={`h-16 flex items-center justify-center p-2 transition-colors rounded-lg border ${isSelected
+                                  ? 'bg-green-50 border-green-500 text-green-700 hover:bg-green-50'
+                                  : isAvailable
+                                    ? 'hover:bg-gray-50 border-gray-200'
+                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
+                                }`}
+                              onClick={() => isAvailable && handleSlotClick(timeSlot, selectedRoom.id)}
+                              disabled={!isAvailable}
                             >
-                              <span className="text-sm font-medium">
-                                {format(timeSlot.startTime, 'h a')}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {format(timeSlot.endTime, 'h a')}
-                              </span>
+                              <div className="text-center">
+                                <span className="block text-sm font-medium">
+                                  {format(timeSlot.startTime, 'h')}-{format(timeSlot.endTime, 'h a')}
+                                </span>
+                                {!isAvailable && (
+                                  <span className="text-xs text-muted-foreground">Booked</span>
+                                )}
+                              </div>
                             </Button>
                           );
                         })}
@@ -274,8 +301,8 @@ const MeetingRooms = () => {
                       </div>
                     </div>
 
-                    <Button 
-                      className="w-full h-12 text-base font-medium" 
+                    <Button
+                      className="w-full h-12 text-base font-medium"
                       size="lg"
                       onClick={handleBookNow}
                       disabled={selectedSlots.length === 0}

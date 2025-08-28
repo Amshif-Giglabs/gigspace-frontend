@@ -1,10 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { format, addDays, isSameDay, addHours, isWithinInterval } from "date-fns";
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, Star, MapPin, Users, Wifi, Monitor, Printer, Lock, Power, CheckIcon, Building2, Ruler, DoorOpen } from "lucide-react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Clock, Star, MapPin, Users, Wifi, Monitor, Printer, Lock, Power, CheckIcon, Building2, Ruler, DoorOpen, Plus, Minus, MessageCircle, Phone } from "lucide-react";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import { useToast } from "@/hooks/use-toast";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 
@@ -40,11 +45,22 @@ const OfficeBooking = () => {
   const [selectedSpace, setSelectedSpace] = useState<OfficeSpace | null>(null);
   const { toast } = useToast();
 
+  // Enquiry form state
+  const [startDate, setStartDate] = useState<Date>();
+  const [endDate, setEndDate] = useState<Date>();
+  const [numberOfSeats, setNumberOfSeats] = useState<number>(1);
+  const [numberOfDays, setNumberOfDays] = useState<number>(30);
+  const [contactName, setContactName] = useState<string>("");
+  const [contactEmail, setContactEmail] = useState<string>("");
+  const [contactPhone, setContactPhone] = useState<string>("");
+  const [specialRequests, setSpecialRequests] = useState<string>("");
+  const [contactMethod, setContactMethod] = useState<'whatsapp' | 'callback'>('whatsapp');
+
   const officeSpaces: OfficeSpace[] = [
     {
       id: 1,
       name: "Private Office - Small",
-      image: "/src/assets/office-1.jpg",
+      image: "/src/assets/private-office.jpg",
       description: "Private office space for 1-2 people, perfect for focused work with natural light and ergonomic furniture.",
       price: 500,
       capacity: "1-2 people",
@@ -58,7 +74,7 @@ const OfficeBooking = () => {
     {
       id: 2,
       name: "Private Office - Medium",
-      image: "/src/assets/office-2.jpg",
+      image: "/src/assets/meeting-room.jpg",
       description: "Spacious office for small teams of 3-4 people with meeting area and storage solutions.",
       price: 800,
       capacity: "3-4 people",
@@ -72,7 +88,7 @@ const OfficeBooking = () => {
     {
       id: 3,
       name: "Executive Suite",
-      image: "/src/assets/office-3.jpg",
+      image: "/src/assets/coworking-space.jpg",
       description: "Luxurious executive office with premium furnishings and panoramic city views.",
       price: 1500,
       capacity: "4-6 people",
@@ -86,7 +102,7 @@ const OfficeBooking = () => {
     {
       id: 4,
       name: "Team Office",
-      image: "/src/assets/office-4.jpg",
+      image: "/src/assets/hero-workspace.jpg",
       description: "Large office space for teams of 6-8 people with collaborative areas and storage.",
       price: 2000,
       capacity: "6-8 people",
@@ -99,13 +115,56 @@ const OfficeBooking = () => {
     }
   ];
 
-  // Set default selected space
-  useState(() => {
-    if (officeSpaces.length > 0) {
+    // Set default selected space
+  useEffect(() => {
+    if (officeSpaces.length > 0 && !selectedSpace) {
       setSelectedSpace(officeSpaces[0]);
       setMainImage(officeSpaces[0].image);
     }
-  });
+  }, [officeSpaces, selectedSpace]);
+
+  // Enquiry function
+  const sendEnquiry = () => {
+    if (!contactPhone) {
+      toast({
+        variant: "destructive",
+        title: "Missing Information",
+        description: "Please enter your phone number.",
+      });
+      return;
+    }
+
+    if (contactMethod === 'whatsapp') {
+      if (!selectedSpace || !startDate || !endDate || !contactName) {
+        toast({
+          variant: "destructive",
+          title: "Missing Information",
+          description: "Please fill in all required fields for WhatsApp enquiry.",
+        });
+        return;
+      }
+    }
+
+    const amenitiesList = selectedSpace.amenities.map(amenity => `✅ ${amenity}`).join('\n');
+    const message = `*Office Space Enquiry*\n\n*Space Details:*\n🏢 ${selectedSpace.name}\n📍 ${selectedSpace.location}\n💺 Capacity: ${selectedSpace.capacity}\n📐 Size: ${selectedSpace.size}\n💰 Price: $${selectedSpace.price}/month\n\n*Booking Details:*\n📅 Start Date: ${format(startDate, 'PPP')}\n📅 End Date: ${format(endDate, 'PPP')}\n👥 Number of Seats: ${numberOfSeats}\n📆 Duration: ${numberOfDays} days\n💵 Estimated Total: $${selectedSpace.price * Math.ceil(numberOfDays / 30)}\n\n*Contact Information:*\n👤 Name: ${contactName}\n� Phone: ${contactPhone}\n� Preferred Contact: ${contactMethod === 'whatsapp' ? 'WhatsApp Message' : 'Call Back'}`;
+
+    if (contactMethod === 'whatsapp') {
+      const phoneNumber = "+1234567890"; // Replace with your WhatsApp business number
+      const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+      window.open(whatsappUrl, '_blank');
+
+      toast({
+        title: "Enquiry Sent!",
+        description: "Your office space enquiry has been sent via WhatsApp.",
+      });
+    } else {
+      // For callback, you could send to a different endpoint or show a different message
+      toast({
+        title: "Callback Requested!",
+        description: "We'll call you back at the provided number within 24 hours.",
+      });
+    }
+  };
 
   // Generate time slots for the selected date
   const timeSlots = (): BookingSlot[] => {
@@ -183,157 +242,380 @@ const OfficeBooking = () => {
 
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Left Column: Office Images and Info */}
-            <div className="lg:w-2/3 space-y-6">
-              {/* Main Image */}
-              <div className="rounded-xl overflow-hidden bg-gray-100">
-                <img
-                  src={mainImage}
-                  alt={selectedSpace.name}
-                  className="w-full h-[400px] object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = "/placeholder.svg";
-                  }}
-                />
-              </div>
-
-              {/* Thumbnail Gallery */}
-              <div className="flex gap-3">
-                {[selectedSpace.image, "/src/assets/office-1.jpg", "/src/assets/office-2.jpg"].map((img, idx) => (
-                  <div
-                    key={idx}
-                    onClick={() => setMainImage(img)}
-                    className={`w-20 h-16 rounded-md overflow-hidden cursor-pointer border-2 ${mainImage === img ? 'border-primary' : 'border-transparent'}`}
-                  >
-                    <img
-                      src={img}
-                      alt={`Preview ${idx + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              {/* Office Info */}
-              <div className="space-y-6 pt-4">
-                <div>
-                  <h2 className="text-2xl font-semibold mb-3">About this office</h2>
-                  <p className="text-muted-foreground">{selectedSpace.description}</p>
+            <div className="lg:w-2/3 pr-0">
+              <div className="grid grid-cols-1 gap-6 w-full">
+                {/* Main Image Grid - 2 Big Images */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {officeSpaces.slice(0, 2).map((space, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-xl overflow-hidden bg-gray-100 cursor-pointer"
+                      onClick={() => {
+                        setSelectedSpace(space);
+                        setMainImage(space.image);
+                      }}
+                    >
+                      <img
+                        src={space.image}
+                        alt={space.name}
+                        className="w-full h-64 object-cover"
+                        loading="eager"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "/placeholder.svg";
+                        }}
+                      />
+                    </div>
+                  ))}
                 </div>
 
-                <div>
-                  <h3 className="text-xl font-medium mb-4">Features</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                        <Users className="h-4 w-4 text-primary" />
-                      </div>
-                      <span>Capacity: {selectedSpace.capacity}</span>
+                {/* Small Images Row - 3 Images */}
+                <div className="grid grid-cols-3 gap-4">
+                  {[selectedSpace.image, "/src/assets/coworking-space.jpg", "/src/assets/hero-workspace.jpg"].map((img, idx) => (
+                    <div
+                      key={idx}
+                      onClick={() => setMainImage(img)}
+                      className={`rounded-xl overflow-hidden bg-gray-100 cursor-pointer border-2 transition-colors ${mainImage === img ? 'border-primary' : 'border-transparent hover:border-gray-200'}`}
+                    >
+                      <img
+                        src={img}
+                        alt={`Preview ${idx + 1}`}
+                        className="w-full h-32 object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = "/placeholder.svg";
+                        }}
+                      />
                     </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                        <Ruler className="h-4 w-4 text-primary" />
-                      </div>
-                      <span>Size: {selectedSpace.size}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                        <MapPin className="h-4 w-4 text-primary" />
-                      </div>
-                      <span>{selectedSpace.location}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                        <DoorOpen className="h-4 w-4 text-primary" />
-                      </div>
-                      <span>{selectedSpace.available} available</span>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
-                <div>
-                  <h3 className="text-xl font-medium mb-4">Amenities</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedSpace.amenities.map((amenity, idx) => (
-                      <div key={idx} className="flex items-center gap-3">
+                {/* Office Info */}
+                <div className="space-y-6 pt-4">
+                  <div>
+                    <h2 className="text-2xl font-semibold mb-3">About this office</h2>
+                    <p className="text-muted-foreground">{selectedSpace.description}</p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl font-medium mb-4">Features</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex items-center gap-3">
                         <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
-                          <CheckIcon className="h-4 w-4 text-primary" />
+                          <Users className="h-4 w-4 text-primary" />
                         </div>
-                        <span>{amenity}</span>
+                        <span>Capacity: {selectedSpace.capacity}</span>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                          <Ruler className="h-4 w-4 text-primary" />
+                        </div>
+                        <span>Size: {selectedSpace.size}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                          <MapPin className="h-4 w-4 text-primary" />
+                        </div>
+                        <span>{selectedSpace.location}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                          <DoorOpen className="h-4 w-4 text-primary" />
+                        </div>
+                        <span>{selectedSpace.available} available</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className="text-xl font-medium mb-4">Amenities</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedSpace.amenities.map((amenity, idx) => (
+                        <div key={idx} className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
+                            <CheckIcon className="h-4 w-4 text-primary" />
+                          </div>
+                          <span>{amenity}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Booking Form */}
-            <div className="lg:w-1/3">
-              <div className="sticky top-28">
+            {/* Right Column: Enquiry Form */}
+            <div className="lg:w-2/5 xl:w-1/3 pl-0 lg:pl-6">
+              <div className="sticky top-6">
                 <Card className="border-none shadow-lg">
                   <CardContent className="p-6">
-                    <div className="flex justify-between items-start mb-6">
-                      <div>
-                        <h2 className="text-2xl font-bold">${selectedSpace.price}<span className="text-base font-normal text-muted-foreground">/month</span></h2>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-sm text-muted-foreground">Available</div>
-                        <div className="font-medium text-lg">{selectedSpace.available} office{selectedSpace.available !== 1 ? 's' : ''}</div>
-                      </div>
-                    </div>
-
-                    {/* Calendar */}
-                    <div className="mb-6">
-                      <h3 className="font-medium mb-3">Select Move-in Date</h3>
-                      <Calendar
-                        mode="single"
-                        selected={selectedDate}
-                        onSelect={handleDateSelect}
-                        className="rounded-md border p-4"
-                        disabled={(date) => date < new Date()}
-                      />
-                    </div>
-
-                    {/* Time Slots */}
-                    <div className="mb-6">
-                      <h3 className="font-medium mb-3">Select Time</h3>
-                      <div className="grid grid-cols-3 gap-2">
-                        {timeSlots().map((slot) => (
-                          <Button
-                            key={slot.id}
-                            variant={isSlotSelected(slot) ? "default" : "outline"}
-                            className={`h-14 flex flex-col items-center justify-center p-2 ${isSlotSelected(slot) ? 'bg-green-100 hover:bg-green-200 text-green-800 border-green-300' : ''}`}
-                            onClick={() => handleSlotClick(slot)}
-                          >
-                            <span className="text-sm font-medium">
-                              {format(slot.startTime, 'h')}-{format(slot.endTime, 'h a')}
-                            </span>
-                          </Button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Price Summary */}
+                    {/* Contact Method Selection - Always Visible */}
                     <div className="space-y-3 mb-6">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">
-                          ${selectedSpace.price} × {selectedSlots.length} month{selectedSlots.length !== 1 ? 's' : ''}
-                        </span>
-                        <span>${totalPrice}</span>
-                      </div>
-                      <div className="border-t pt-3 flex justify-between font-semibold">
-                        <span>Total</span>
-                        <span>${totalPrice}</span>
+                      <Label className="text-sm font-medium">How would you like us to contact you?</Label>
+                      <div className="grid grid-cols-1 gap-3">
+                        <div
+                          className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                            contactMethod === 'whatsapp'
+                              ? 'border-green-500 bg-green-50 shadow-md'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => setContactMethod('whatsapp')}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                              contactMethod === 'whatsapp'
+                                ? 'border-green-500 bg-green-500'
+                                : 'border-gray-300'
+                            }`}>
+                              {contactMethod === 'whatsapp' && (
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2 flex-1">
+                              <MessageCircle className={`h-5 w-5 flex-shrink-0 ${
+                                contactMethod === 'whatsapp' ? 'text-green-600' : 'text-gray-500'
+                              }`} />
+                              <div className="min-w-0 flex-1">
+                                <p className={`font-medium text-sm ${
+                                  contactMethod === 'whatsapp' ? 'text-green-800' : 'text-gray-700'
+                                }`}>
+                                  WhatsApp Message
+                                </p>
+                                <p className="text-xs text-gray-500">Get instant quote & details</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          className={`border-2 rounded-lg p-4 cursor-pointer transition-all duration-200 hover:shadow-md ${
+                            contactMethod === 'callback'
+                              ? 'border-blue-500 bg-blue-50 shadow-md'
+                              : 'border-gray-200 hover:border-gray-300'
+                          }`}
+                          onClick={() => setContactMethod('callback')}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                              contactMethod === 'callback'
+                                ? 'border-blue-500 bg-blue-500'
+                                : 'border-gray-300'
+                            }`}>
+                              {contactMethod === 'callback' && (
+                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                              )}
+                            </div>
+                            <div className="flex items-center space-x-2 flex-1">
+                              <Phone className={`h-5 w-5 flex-shrink-0 ${
+                                contactMethod === 'callback' ? 'text-blue-600' : 'text-gray-500'
+                              }`} />
+                              <div className="min-w-0 flex-1">
+                                <p className={`font-medium text-sm ${
+                                  contactMethod === 'callback' ? 'text-blue-800' : 'text-gray-700'
+                                }`}>
+                                  Request Call Back
+                                </p>
+                                <p className="text-xs text-gray-500">We'll call you within 24h</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Conditional Content Based on Contact Method */}
+                    {contactMethod === 'whatsapp' ? (
+                      <>
+                        {/* Office Details - Only for WhatsApp */}
+                        <div className="flex justify-between items-start mb-8 p-6 bg-white rounded-xl border border-gray-200">
+                          <div className="flex-1">
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedSpace.name}</h2>
+                            <p className="text-gray-600 text-lg">{selectedSpace.location}</p>
+                          </div>
+                          <div className="text-right ml-6">
+                            <div className="text-sm text-gray-500 mb-1">Available</div>
+                            <div className="font-bold text-xl text-gray-900">{selectedSpace.available} office{selectedSpace.available !== 1 ? 's' : ''}</div>
+                          </div>
+                        </div>
+
+                        {/* WhatsApp Form Fields */}
+                        <div className="space-y-4">
+                          {/* Date Selection Row */}
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <Label htmlFor="startDate" className="text-sm font-medium text-gray-800 mb-2 block">Start Date</Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-left font-normal h-10 text-sm"
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {startDate ? format(startDate, "dd/MM/yyyy") : "Select start date"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <Calendar
+                                    mode="single"
+                                    selected={startDate}
+                                    onSelect={setStartDate}
+                                    disabled={(date) => date < new Date()}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="endDate" className="text-sm font-medium text-gray-800 mb-2 block">End Date</Label>
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <Button
+                                    variant="outline"
+                                    className="w-full justify-start text-left font-normal h-10 text-sm"
+                                  >
+                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                    {endDate ? format(endDate, "dd/MM/yyyy") : "Select end date"}
+                                  </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-auto p-0">
+                                  <Calendar
+                                    mode="single"
+                                    selected={endDate}
+                                    onSelect={setEndDate}
+                                    disabled={(date) => date < new Date()}
+                                  />
+                                </PopoverContent>
+                              </Popover>
+                            </div>
+                          </div>
+
+                          {/* Seats and Duration Row */}
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <Label className="text-sm font-medium text-gray-800 mb-2 block">Number of Seats</Label>
+                              <div className="flex items-center gap-3">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setNumberOfSeats(Math.max(1, numberOfSeats - 1))}
+                                  disabled={numberOfSeats <= 1}
+                                  className="h-9 w-9 p-0 flex-shrink-0"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                <div className="flex items-center justify-center w-16 h-9 border rounded-lg bg-background font-semibold text-sm">
+                                  {numberOfSeats}
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setNumberOfSeats(numberOfSeats + 1)}
+                                  className="h-9 w-9 p-0 flex-shrink-0"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+
+                            <div>
+                              <Label htmlFor="days" className="text-sm font-medium text-gray-800 mb-2 block">Duration (Days)</Label>
+                              <Input
+                                id="days"
+                                type="number"
+                                min="1"
+                                value={numberOfDays}
+                                onChange={(e) => setNumberOfDays(parseInt(e.target.value) || 1)}
+                                className="h-10 text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Contact Information Row */}
+                          <div className="grid grid-cols-1 gap-4">
+                            <div>
+                              <Label htmlFor="name" className="text-sm font-medium text-gray-800 mb-2 block">Full Name *</Label>
+                              <Input
+                                id="name"
+                                type="text"
+                                value={contactName}
+                                onChange={(e) => setContactName(e.target.value)}
+                                placeholder="Enter your full name"
+                                className="h-10 text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <Label htmlFor="phone" className="text-sm font-medium text-gray-800 mb-2 block">Phone Number *</Label>
+                              <Input
+                                id="phone"
+                                type="tel"
+                                value={contactPhone}
+                                onChange={(e) => setContactPhone(e.target.value)}
+                                placeholder="Enter your phone number"
+                                className="h-10 text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      /* Callback - Minimal Interface */
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="phone" className="text-sm font-medium text-gray-800">Phone Number *</Label>
+                          <Input
+                            id="phone"
+                            type="tel"
+                            value={contactPhone}
+                            onChange={(e) => setContactPhone(e.target.value)}
+                            placeholder="Enter your phone number"
+                            className="mt-1 h-10 text-sm"
+                          />
+                        </div>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                          <div className="flex items-start space-x-3">
+                            <Phone className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                            <div className="text-sm text-blue-800 space-y-1">
+                              <p className="font-medium text-sm">We'll call you back within 24 hours</p>
+                              <p className="text-blue-700 leading-relaxed text-xs">Our team will discuss your office space requirements and provide personalized recommendations tailored to your needs.</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Price Summary - Only show for WhatsApp enquiries */}
+                    {contactMethod === 'whatsapp' && (
+                      <div className="space-y-4 mb-8 mt-8 p-6 bg-gray-50 rounded-xl border">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-base">
+                            ${selectedSpace.price} × {Math.ceil(numberOfDays / 30)} month{Math.ceil(numberOfDays / 30) !== 1 ? 's' : ''}
+                          </span>
+                          <span className="font-semibold text-lg">${selectedSpace.price * Math.ceil(numberOfDays / 30)}</span>
+                        </div>
+                        <div className="border-t border-gray-300 pt-4 flex justify-between items-center">
+                          <span className="font-semibold text-lg text-gray-800">Estimated Total</span>
+                          <span className="font-bold text-xl text-gray-900">${selectedSpace.price * Math.ceil(numberOfDays / 30)}</span>
+                        </div>
+                      </div>
+                    )}
 
                     <Button
-                      className="w-full h-12 text-base font-medium"
+                      className="w-full h-12 text-base font-semibold mt-4"
                       size="lg"
-                      onClick={handleBookNow}
-                      disabled={selectedSlots.length === 0}
+                      onClick={sendEnquiry}
                     >
-                      Book Office Space
+                      {contactMethod === 'whatsapp' ? (
+                        <>
+                          <MessageCircle className="mr-2 h-4 w-4" />
+                          Send Enquiry via WhatsApp
+                        </>
+                      ) : (
+                        <>
+                          <Phone className="mr-2 h-4 w-4" />
+                          Request Call Back
+                        </>
+                      )}
                     </Button>
                   </CardContent>
                 </Card>

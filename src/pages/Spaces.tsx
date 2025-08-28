@@ -203,13 +203,28 @@ const Spaces = () => {
             
             {/* Results Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredSpaces.map((space) => (
-                <SpaceCard 
-                  key={space.id} 
-                  {...space} 
-                  onClick={() => navigate(`/spaces/${space.id}`)}
-                />
-              ))}
+              {filteredSpaces.map((space) => {
+                const getBookingRoute = (type: string) => {
+                  switch (type) {
+                    case "Private Office":
+                      return "/office-booking";
+                    case "Coworking":
+                      return "/coworking";
+                    case "Meeting Room":
+                      return "/meeting-rooms";
+                    default:
+                      return "/spaces";
+                  }
+                };
+
+                return (
+                  <SpaceCard 
+                    key={space.id} 
+                    {...space} 
+                    onClick={() => navigate(getBookingRoute(space.type))}
+                  />
+                );
+              })}
             </div>
             
             {filteredSpaces.length === 0 && (
