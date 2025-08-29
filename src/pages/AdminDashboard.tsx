@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -36,20 +36,25 @@ import {
   Edit
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { createAssetImages } from "@/api/assetImage";
+import { addSpaceAmenities, getAmenities } from "@/api/amenities";
+import { Amenity } from "@/types/types";
+import { createAsset } from "@/api/assets";
+import { createAvailabilitySchedule } from "@/api/availability";
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const { toast } = useToast();
   const [currentStep, setCurrentStep] = useState(1);
-    const [savedAssets, setSavedAssets] = useState<Array<{
+  const [savedAssets, setSavedAssets] = useState<Array<{
       id: string;
       name: string;
-      type: string;
-      location: string;
-      capacity: string;
+      asset_type: string;
+      city_id: string;
+      seat_capacity: string;
       description: string;
-      basePrice: string;
-      currency: string;
+      base_price: string;
+      currency_id: string;
       amenities: string[];
       images: File[];
       slots: Array<{
@@ -64,12 +69,12 @@ const AdminDashboard = () => {
       {
         id: 'sample-1',
         name: 'Executive Conference Room',
-        type: 'conference-room',
-        location: 'floor-2',
-        capacity: '10-12',
+        asset_type: 'conference-room',
+        city_id: 'floor-2',
+        seat_capacity: '10-12',
         description: 'Premium conference room equipped with 4K display, video conferencing, and whiteboard.',
-        basePrice: '120',
-        currency: 'USD',
+        base_price: '120',
+        currency_id: 'USD',
         amenities: ['wifi', 'projector', 'whiteboard', 'security', 'parking'],
         images: [],
         slots: [],
@@ -77,18 +82,49 @@ const AdminDashboard = () => {
       {
         id: 'sample-2',
         name: 'Private Office Suite',
-        type: 'private-office',
-        location: 'floor-3',
-        capacity: '4-6',
+        asset_type: 'private-office',
+        city_id: 'floor-3',
+        seat_capacity: '4-6',
         description: 'Quiet private office with ergonomic chairs, dedicated AC, and secure access.',
-        basePrice: '75',
-        currency: 'USD',
+        base_price: '75',
+        currency_id: 'USD',
         amenities: ['wifi', 'ac', 'security', 'accessibility'],
         images: [],
         slots: [],
       },
     ]);
+
+    const sidebarItems = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { 
+      id: "asset-management", 
+      label: "Asset Management", 
+      icon: Settings,
+      hasSubmenu: true,
+      submenu: [
+        { id: "assets", label: "Assets", icon: Settings },
+        { id: "create-asset", label: "Create New Asset", icon: Plus }
+      ]
+    },
+  ];
+
+  const commonAmenities = [
+    {
+      id: '',
+      name: '',
+      description: '' ,
+      icon_url: '' ,
+      created_by: '' ,
+      updated_by: '' ,
+      created_at: '',
+      updated_at: ''
+    }
+  ];
+
+
+  const [isAmenLoading, setIsAmenLoading] = useState<Boolean>(true);
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+  const [amenities, setAmenities] = useState<Amenity[]>(commonAmenities);
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [availabilityMode, setAvailabilityMode] = useState("daily");
   const [selectedTimeSlots, setSelectedTimeSlots] = useState<string[]>([]);
@@ -125,12 +161,12 @@ const AdminDashboard = () => {
   const [assetManagementExpanded, setAssetManagementExpanded] = useState(false);
   const [assetForm, setAssetForm] = useState({
     name: "",
-    type: "",
-    location: "",
-    capacity: "",
+    asset_type: "",
+    city_id: "",
+    seat_capacity: "",
     description: "",
-    basePrice: "",
-  currency: "INR",
+    base_price: "",
+  currency_id: "650e8400-e29b-41d4-a716-446655440001",
   });
   const [isEditing, setIsEditing] = useState(false);
   const [editingAssetId, setEditingAssetId] = useState<string | null>(null);
@@ -138,12 +174,12 @@ const AdminDashboard = () => {
   const [assetToView, setAssetToView] = useState<null | {
     id: string;
     name: string;
-    type: string;
-    location: string;
-    capacity: string;
+    asset_type: string;
+    city_id: string;
+    seat_capacity: string;
     description: string;
-    basePrice: string;
-    currency: string;
+    base_price: string;
+    currency_id: string;
     amenities: string[];
     images: File[];
     slots: Array<{
@@ -161,12 +197,12 @@ const AdminDashboard = () => {
   const resetAssetBuilder = () => {
     setAssetForm({
       name: "",
-      type: "",
-      location: "",
-      capacity: "",
+      asset_type: "",
+      city_id: "",
+      seat_capacity: "",
       description: "",
-      basePrice: "",
-  currency: "INR",
+      base_price: "",
+      currency_id: "650e8400-e29b-41d4-a716-446655440001",
     });
     setSelectedAmenities([]);
     setUploadedImages([]);
@@ -182,17 +218,44 @@ const AdminDashboard = () => {
     setCurrentStep(1);
   };
 
-  const handleSaveAsset = () => {
-    const assetId = isEditing && editingAssetId ? editingAssetId : Date.now().toString();
+  const handleSaveAsset =async () => {
+    //Asset api here
+    const assetId = isEditing && editingAssetId ? editingAssetId : '';
+    const creationAsset = {
+      id:null,
+      name: assetForm.name.trim(),
+      tenant_id:'850e8400-e29b-41d4-a716-446655440001',
+      asset_type: assetForm.asset_type,
+      city_id: assetForm.city_id,
+      seat_capacity: assetForm.seat_capacity,
+      description: assetForm.description,
+      base_price: assetForm.base_price,
+      currency_id: assetForm.currency_id,
+      status: 'available',
+      created_by:'550e8400-e29b-41d4-a716-446655440001',
+      updated_by:'550e8400-e29b-41d4-a716-446655440001',
+      created_at:null,
+      updated_at:null
+    };
+    
+    console.log(savedSlots)
+    const result = await createAsset(creationAsset)
+
+    await addSpaceAmenities (result.id,selectedAmenities) 
+
+    const result2 = await createAvailabilitySchedule (result.id,savedSlots) 
+    console.log(result2)
+    
+    await createAssetImages (result.id,uploadedImages) 
     const newAsset = {
       id: assetId,
       name: assetForm.name.trim(),
-      type: assetForm.type,
-      location: assetForm.location,
-      capacity: assetForm.capacity,
+      asset_type: assetForm.asset_type,
+      city_id: assetForm.city_id,
+      seat_capacity: assetForm.seat_capacity,
       description: assetForm.description,
-      basePrice: assetForm.basePrice,
-      currency: assetForm.currency,
+      base_price: assetForm.base_price,
+      currency_id: assetForm.currency_id,
       amenities: [...selectedAmenities],
       images: [...uploadedImages],
       slots: [...savedSlots],
@@ -217,12 +280,12 @@ const AdminDashboard = () => {
     setEditingAssetId(asset.id);
     setAssetForm({
       name: asset.name,
-      type: asset.type,
-      location: asset.location,
-      capacity: asset.capacity,
+      asset_type: asset.asset_type,
+      city_id: asset.city_id,
+      seat_capacity: asset.seat_capacity,
       description: asset.description,
-      basePrice: asset.basePrice,
-      currency: asset.currency,
+      base_price: asset.base_price,
+      currency_id: asset.currency_id,
     });
     setSelectedAmenities(asset.amenities);
     setUploadedImages(asset.images);
@@ -233,31 +296,23 @@ const AdminDashboard = () => {
     setShowEditDialog(true);
   };
 
-  const sidebarItems = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { 
-      id: "asset-management", 
-      label: "Asset Management", 
-      icon: Settings,
-      hasSubmenu: true,
-      submenu: [
-        { id: "assets", label: "Assets", icon: Settings },
-        { id: "create-asset", label: "Create New Asset", icon: Plus }
-      ]
-    },
-  ];
+  useEffect(()=>{
+    fetchAmenities()
+  },[])
 
-  const commonAmenities = [
-    { id: "wifi", label: "Wi-Fi", icon: Wifi },
-    { id: "projector", label: "Projector", icon: Monitor },
-    { id: "whiteboard", label: "Whiteboard", icon: Monitor },
-    { id: "parking", label: "Parking", icon: Car },
-    { id: "ac", label: "Air Conditioning", icon: Monitor },
-    { id: "catering", label: "Catering", icon: Coffee },
-    { id: "accessibility", label: "Accessibility", icon: Shield },
-    { id: "av-equipment", label: "AV Equipment", icon: Monitor },
-    { id: "security", label: "Security", icon: Shield },
-  ];
+   const fetchAmenities = async () => {
+        try {
+          const result:Amenity[] =  await getAmenities()
+          setAmenities(result)
+          // setError(null);
+          console.log(result)
+        } catch (error) {
+          console.error("Failed to fetch amenities");
+        }
+        finally{
+          setIsAmenLoading(false)
+        }
+      };
 
   const handleAmenityToggle = (amenityId: string) => {
     setSelectedAmenities(prev => 
@@ -267,7 +322,7 @@ const AdminDashboard = () => {
     );
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
     setUploadedImages(prev => [...prev, ...files]);
   };
@@ -275,6 +330,11 @@ const AdminDashboard = () => {
   const removeImage = (index: number) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
   };
+
+
+
+
+//UI CODE START
 
   const renderStepIndicator = () => (
     <div className="flex items-center space-x-4 mb-8">
@@ -322,17 +382,16 @@ const AdminDashboard = () => {
           <div className="space-y-2">
             <Label htmlFor="asset-type">Asset Type *</Label>
             <Select 
-              value={assetForm.type} 
-              onValueChange={(value) => setAssetForm(prev => ({ ...prev, type: value }))}
+              value={assetForm.asset_type} 
+              onValueChange={(value) => setAssetForm(prev => ({ ...prev, asset_type: value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select asset type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="meeting-room">Meeting Room</SelectItem>
-                <SelectItem value="private-office">Private Office</SelectItem>
-                <SelectItem value="coworking">Coworking Space</SelectItem>
-                <SelectItem value="conference-room">Conference Room</SelectItem>
+                <SelectItem value="meeting_room">Meeting Room</SelectItem>
+                <SelectItem value="hall">Hall</SelectItem>
+                <SelectItem value="auditorium">auditorium</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -340,32 +399,32 @@ const AdminDashboard = () => {
 
         <div className="space-y-2">
           <Label htmlFor="location">Location *</Label>
-          <Select value={assetForm.location} onValueChange={(value) => setAssetForm(prev => ({ ...prev, location: value }))}>
+          <Select value={assetForm.city_id} onValueChange={(value) => setAssetForm(prev => ({ ...prev, city_id: value }))}>
             <SelectTrigger>
               <SelectValue placeholder="Select location" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="floor-1">Floor 1 - East Wing</SelectItem>
-              <SelectItem value="floor-2">Floor 2 - West Wing</SelectItem>
+              <SelectItem value="4877e6ab-02f7-4b26-905c-26748325324e">Mangalore</SelectItem>
+              {/* <SelectItem value="floor-2">Floor 2 - West Wing</SelectItem>
               <SelectItem value="floor-3">Floor 3 - North Wing</SelectItem>
-              <SelectItem value="ground">Ground Floor - Main Hall</SelectItem>
+              <SelectItem value="ground">Ground Floor - Main Hall</SelectItem> */}
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
           <Label htmlFor="capacity">Capacity *</Label>
-          <Select value={assetForm.capacity} onValueChange={(value) => setAssetForm(prev => ({ ...prev, capacity: value }))}>
+          <Select value={assetForm.seat_capacity} onValueChange={(value) => setAssetForm(prev => ({ ...prev, seat_capacity: value }))}>
             <SelectTrigger>
               <SelectValue placeholder="Number of people" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="1-2">1-2 people</SelectItem>
-              <SelectItem value="3-5">3-5 people</SelectItem>
-              <SelectItem value="6-10">6-10 people</SelectItem>
-              <SelectItem value="11-15">11-15 people</SelectItem>
-              <SelectItem value="16-20">16-20 people</SelectItem>
-              <SelectItem value="20+">20+ people</SelectItem>
+              <SelectItem value="2">1-2 people</SelectItem>
+              <SelectItem value="5">3-5 people</SelectItem>
+              <SelectItem value="10">6-10 people</SelectItem>
+              <SelectItem value="15">11-15 people</SelectItem>
+              <SelectItem value="20">16-20 people</SelectItem>
+              <SelectItem value="50">20+ people</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -377,26 +436,23 @@ const AdminDashboard = () => {
               id="base-price"
               type="number"
               placeholder="Enter base price"
-              value={assetForm.basePrice}
-              onChange={(e) => setAssetForm(prev => ({ ...prev, basePrice: e.target.value }))}
+              value={assetForm.base_price}
+              onChange={(e) => setAssetForm(prev => ({ ...prev, base_price: e.target.value }))}
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="currency">Currency *</Label>
             <Select 
-              value={assetForm.currency} 
-              onValueChange={(value) => setAssetForm(prev => ({ ...prev, currency: value }))}
+              value={assetForm.currency_id} 
+              onValueChange={(value) => setAssetForm(prev => ({ ...prev, currency_id: value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select currency" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="USD">USD - US Dollar</SelectItem>
-                <SelectItem value="EUR">EUR - Euro</SelectItem>
-                <SelectItem value="GBP">GBP - British Pound</SelectItem>
-                <SelectItem value="INR">INR - Indian Rupee</SelectItem>
-                <SelectItem value="CAD">CAD - Canadian Dollar</SelectItem>
-                <SelectItem value="AUD">AUD - Australian Dollar</SelectItem>
+                <SelectItem value="650e8400-e29b-41d4-a716-446655440002">USD - US Dollar</SelectItem>
+                <SelectItem value="650e8400-e29b-41d4-a716-446655440003">EUR - Euro</SelectItem>
+                <SelectItem value="650e8400-e29b-41d4-a716-446655440001">INR - Indian Rupee</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -409,7 +465,7 @@ const AdminDashboard = () => {
               id="description"
               placeholder="Enter a short description of the asset"
               value={assetForm.description}
-              onChange={(e) => setAssetForm(prev => ({ ...prev, description: e.target.value }))}
+              onChange={(e) => {setAssetForm(prev => ({ ...prev, description: e.target.value }));console.log(assetForm);}}
               className="min-h-[100px]"
             />
             <p className="text-xs text-gray-500">Brief description of the asset's features and purpose (max 500 characters)</p>
@@ -478,30 +534,30 @@ const AdminDashboard = () => {
         <div>
           <h3 className="text-lg font-medium mb-4">Common Amenities</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {commonAmenities.map((amenity) => (
+            {amenities.map((amenity) => (
               <div key={amenity.id} className="flex items-center space-x-3">
                 <Checkbox
                   id={amenity.id}
                   checked={selectedAmenities.includes(amenity.id)}
                   onCheckedChange={() => handleAmenityToggle(amenity.id)}
                 />
-                <amenity.icon className="h-4 w-4 text-blue-600" />
+                {/* <amenity.icon className="h-4 w-4 text-blue-600" /> */}
                 <Label htmlFor={amenity.id} className="text-sm font-medium">
-                  {amenity.label}
+                  {amenity.description}
                 </Label>
               </div>
             ))}
           </div>
         </div>
 
-        <div>
+        {/* <div>
           <h3 className="text-lg font-medium mb-4">Custom Amenities</h3>
           <p className="text-sm text-gray-600 mb-3">Add any additional amenities specific to this asset</p>
           <div className="flex space-x-2">
             <Input placeholder="Enter custom amenity" className="flex-1" />
             <Button variant="outline" size="sm">Add</Button>
           </div>
-        </div>
+        </div> */}
       </CardContent>
     </Card>
   );
@@ -569,6 +625,7 @@ const AdminDashboard = () => {
       return `${hour12}:${m.toString().padStart(2,'0')} ${ampm}`;
     };
 
+    
     const saveSlot = () => {
       if (availabilityMode === "daily") {
         const enabledDays = weekSchedule.filter(w => w.enabled);
@@ -1206,7 +1263,7 @@ const AdminDashboard = () => {
                       <div className="flex items-start justify-between">
                         <div>
                           <CardTitle className="text-lg">{asset.name}</CardTitle>
-                          <CardDescription className="text-xs capitalize">{asset.type.replace('-', ' ')}</CardDescription>
+                          <CardDescription className="text-xs capitalize">{asset.asset_type.replace('-', ' ')}</CardDescription>
                         </div>
                         <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); handleEditAsset(asset.id); }}>
                           <Edit className="h-4 w-4 mr-1" /> Edit
@@ -1216,11 +1273,11 @@ const AdminDashboard = () => {
                     <CardContent className="space-y-3">
                       <div className="flex items-center justify-between text-sm">
                         <div className="text-gray-700">
-                          <div><span className="font-medium">Location:</span> {asset.location || "—"}</div>
-                          <div><span className="font-medium">Capacity:</span> {asset.capacity || "—"}</div>
+                          <div><span className="font-medium">Location:</span> {asset.city_id || "—"}</div>
+                          <div><span className="font-medium">Capacity:</span> {asset.seat_capacity || "—"}</div>
                         </div>
                         <div className="text-right">
-                          <div className="text-xl font-bold">{asset.basePrice ? `${asset.currency} ${asset.basePrice}` : "—"}</div>
+                          <div className="text-xl font-bold">{asset.base_price ? `${asset.currency_id} ${asset.base_price}` : "—"}</div>
                           <div className="text-xs text-gray-500">per day</div>
                         </div>
                       </div>
@@ -1405,11 +1462,11 @@ const AdminDashboard = () => {
                   <div>
                     <DialogHeader>
                       <DialogTitle className="text-xl">{assetToView.name}</DialogTitle>
-                      <DialogDescription className="capitalize">{assetToView.type.replace('-', ' ')}</DialogDescription>
+                      <DialogDescription className="capitalize">{assetToView.asset_type.replace('-', ' ')}</DialogDescription>
                     </DialogHeader>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold">{assetToView.basePrice ? `${assetToView.currency} ${assetToView.basePrice}` : '—'}</div>
+                    <div className="text-2xl font-bold">{assetToView.base_price ? `${assetToView.currency_id} ${assetToView.base_price}` : '—'}</div>
                     <div className="text-xs text-gray-500">per day</div>
                   </div>
                 </div>
@@ -1418,8 +1475,8 @@ const AdminDashboard = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div><span className="font-medium">Location:</span> {assetToView.location || '—'}</div>
-                    <div><span className="font-medium">Capacity:</span> {assetToView.capacity || '—'}</div>
+                    <div><span className="font-medium">Location:</span> {assetToView.city_id || '—'}</div>
+                    <div><span className="font-medium">Capacity:</span> {assetToView.seat_capacity || '—'}</div>
                   </div>
                   <div>
                     <div className="font-medium mb-1">Amenities</div>
@@ -1481,12 +1538,12 @@ const AdminDashboard = () => {
                       const updated = {
                         id: editingAssetId,
                         name: assetForm.name.trim(),
-                        type: assetForm.type,
-                        location: assetForm.location,
-                        capacity: assetForm.capacity,
+                        asset_type: assetForm.asset_type,
+                        city_id: assetForm.city_id,
+                        seat_capacity: assetForm.seat_capacity,
                         description: assetForm.description,
-                        basePrice: assetForm.basePrice,
-                        currency: assetForm.currency,
+                        base_price: assetForm.base_price,
+                        currency_id: assetForm.currency_id,
                         amenities: selectedAmenities,
                         images: uploadedImages,
                         slots: savedSlots,
