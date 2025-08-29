@@ -111,14 +111,23 @@ const CoworkingSpaces = () => {
       });
       return;
     }
-    // Navigate to cart page with booking data
+    // Convert each selected date to a slot (9am-6pm for each day)
+    const slots = selectedDates.map((date, idx) => {
+      const startTime = new Date(date);
+      startTime.setHours(9, 0, 0, 0);
+      const endTime = new Date(date);
+      endTime.setHours(18, 0, 0, 0);
+      return {
+        id: `slot-${idx}-${startTime.toISOString()}`,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+      };
+    });
     navigate('/cart', {
       state: {
-        dates: selectedDates.map(d => d.toISOString()),
-        spaceName: selectedSpace.name,
+        slots,
+        roomName: selectedSpace.name,
         price: selectedSpace.price,
-        type: selectedSpace.type,
-        seats: selectedSeats,
       }
     });
   };

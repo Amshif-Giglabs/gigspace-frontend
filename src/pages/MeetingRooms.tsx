@@ -258,20 +258,26 @@ const MeetingRooms = () => {
                       <div className="grid grid-cols-2 gap-3">
                         {timeSlots.map((timeSlot, idx) => {
                           const isSelected = isSlotSelected(timeSlot, selectedRoom.id);
-                          const isAvailable = Math.random() > 0.3; // Replace with actual availability check
+                          // Use a stable pseudo-random for demo: slot is booked if (idx + selectedDate.getDate()) % 4 === 0
+                          const isAvailable = ((idx + selectedDate.getDate()) % 4 !== 0);
+
+                          let slotClass = '';
+                          if (!isAvailable) {
+                            slotClass = 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200';
+                          } else if (isSelected) {
+                            slotClass = 'bg-green-50 border-green-500 text-green-700 hover:bg-green-50';
+                          } else {
+                            slotClass = 'hover:bg-gray-50 border-gray-200';
+                          }
 
                           return (
                             <Button
                               key={idx}
                               variant="outline"
-                              className={`h-16 flex items-center justify-center p-2 transition-colors rounded-lg border ${isSelected
-                                  ? 'bg-green-50 border-green-500 text-green-700 hover:bg-green-50'
-                                  : isAvailable
-                                    ? 'hover:bg-gray-50 border-gray-200'
-                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border-gray-200'
-                                }`}
-                              onClick={() => isAvailable && handleSlotClick(timeSlot, selectedRoom.id)}
+                              className={`h-16 flex items-center justify-center p-2 transition-colors rounded-lg border ${slotClass}`}
+                              onClick={isAvailable ? () => handleSlotClick(timeSlot, selectedRoom.id) : undefined}
                               disabled={!isAvailable}
+                              tabIndex={isAvailable ? 0 : -1}
                             >
                               <div className="text-center">
                                 <span className="block text-sm font-medium">

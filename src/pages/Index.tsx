@@ -30,6 +30,8 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
+  const [spaceType, setSpaceType] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
 
   const handleSubscribe = async () => {
     if (!email) {
@@ -182,24 +184,35 @@ const Index = () => {
             <h2 className="text-lg font-medium mb-4">Browse available assets</h2>
             <div className="flex flex-col md:flex-row gap-4 items-end justify-center">
               <div className="w-full md:w-64">
-                <Select>
+                <Select value={spaceType} onValueChange={setSpaceType}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Asset Type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="meeting-room">Meeting Room</SelectItem>
-                    <SelectItem value="private-office">Private Office</SelectItem>
-                    <SelectItem value="coworking">Coworking Space</SelectItem>
+                    <SelectItem value="Meeting Room">Meeting Room</SelectItem>
+                    <SelectItem value="Private Office">Private Office</SelectItem>
+                    <SelectItem value="Coworking">Coworking Space</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="w-full md:w-48">
-                <Input type="date" className="w-full" />
+                <Input 
+                  type="date" 
+                  className="w-full" 
+                  min={new Date().toISOString().split('T')[0]}
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                />
               </div>
 
               <Button 
-                onClick={() => navigate("/spaces")}
+                onClick={() => {
+                  const params = new URLSearchParams();
+                  if (spaceType) params.append('type', spaceType);
+                  if (selectedDate) params.append('date', selectedDate);
+                  navigate(`/spaces?${params.toString()}`);
+                }}
                 className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-2 h-10 whitespace-nowrap"
               >
                 Explore
@@ -308,9 +321,27 @@ const Index = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
-            {featuredSpaces.map((space) => (
-              <SpaceCard key={space.id} {...space} />
-            ))}
+            {featuredSpaces.map((space) => {
+              const getBookingRoute = (type: string) => {
+                switch (type) {
+                  case "Private Office":
+                    return "/office-booking";
+                  case "Coworking":
+                    return "/coworking";
+                  case "Meeting Room":
+                    return "/meeting-rooms";
+                  default:
+                    return "/spaces";
+                }
+              };
+              return (
+                <SpaceCard
+                  key={space.id}
+                  {...space}
+                  onClick={() => navigate(getBookingRoute(space.type))}
+                />
+              );
+            })}
           </div>
           
           {showAllSpaces && (

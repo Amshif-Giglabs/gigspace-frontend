@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,12 +11,14 @@ import SpaceCard from "@/components/SpaceCard";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 import { 
   Filter, 
-  Search
+  Search,
+  Calendar as CalendarIcon
 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
 import coworkingImage from "@/assets/coworking-space.jpg";
 import privateOfficeImage from "@/assets/private-office.jpg";
 import meetingRoomImage from "@/assets/meeting-room.jpg";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 const Spaces = () => {
   // Scroll to top when component mounts
@@ -24,8 +26,11 @@ const Spaces = () => {
   
   const navigate = useNavigate();
   const [priceRange] = useState([0, 200]);
-  const [spaceType, setSpaceType] = useState("");
+  const [searchParams] = useSearchParams();
+  const [spaceType, setSpaceType] = useState(searchParams.get('type') || "");
   const [capacity, setCapacity] = useState("");
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || "");
+  const [showDatePicker, setShowDatePicker] = useState(false);
 
   const allSpaces = [
     {
@@ -108,12 +113,32 @@ const Spaces = () => {
     }
   ];
 
+  useEffect(() => {
+    const type = searchParams.get('type');
+    const date = searchParams.get('date');
+    
+    if (type) setSpaceType(type);
+    if (date) setSelectedDate(date);
+  }, [searchParams]);
+
+  const [sortOrder, setSortOrder] = useState("recommended");
+
   const filteredSpaces = allSpaces.filter(space => {
     const matchesType = spaceType === "all-types" || !spaceType || space.type === spaceType;
     const matchesCapacity = capacity === "any-size" || !capacity || space.capacity >= parseInt(capacity);
     const matchesPrice = space.price >= priceRange[0] && space.price <= priceRange[1];
+    let matchesDate = true;
+    if (selectedDate) {
+      matchesDate = true;
+    }
+    return matchesType && matchesCapacity && matchesPrice && matchesDate;
+  });
 
-    return matchesType && matchesCapacity && matchesPrice;
+  const sortedSpaces = [...filteredSpaces].sort((a, b) => {
+    if (sortOrder === "price-low") return a.price - b.price;
+    if (sortOrder === "price-high") return b.price - a.price;
+    if (sortOrder === "rating") return b.rating - a.rating;
+    return 0; // recommended (default order)
   });
 
   return (
@@ -134,7 +159,7 @@ const Spaces = () => {
           <Card className="max-w-4xl mx-auto">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-4 w-full">
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Select value={spaceType} onValueChange={setSpaceType}>
                     <SelectTrigger>
                       <SelectValue placeholder="Space Type" />
@@ -158,12 +183,46 @@ const Spaces = () => {
                       <SelectItem value="12">12+ People</SelectItem>
                     </SelectContent>
                   </Select>
+                  
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className={`w-full flex items-center border rounded px-3 py-2 bg-background text-left font-normal ${!selectedDate ? 'text-muted-foreground' : ''}`}
+                      onClick={() => setShowDatePicker(!showDatePicker)}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {selectedDate ?
+                        new Date(selectedDate).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        }) :
+                        'Select Date'}
+                    </button>
+                    {showDatePicker && (
+                      <div className="absolute z-10 mt-1 bg-white border rounded-md shadow-lg min-w-[260px] max-w-[320px] w-max overflow-auto">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate ? new Date(selectedDate) : undefined}
+                          onSelect={date => {
+                            setSelectedDate(date ? date.toISOString().split('T')[0] : "");
+                            setShowDatePicker(false);
+                          }}
+                          disabled={date => date < new Date(new Date().toDateString())}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <Button 
                   className="w-full sm:w-auto"
                   onClick={() => {
-                    // Search functionality is handled by the filteredSpaces array
-                    // The button is just for visual consistency
+                    const params = new URLSearchParams();
+                    if (spaceType) params.set('type', spaceType);
+                    if (selectedDate) params.set('date', selectedDate);
+                    if (capacity) params.set('capacity', capacity);
+                    
+                    navigate(`/spaces?${params.toString()}`);
                   }}
                 >
                   <Search className="h-4 w-4 mr-2" />
@@ -188,7 +247,7 @@ const Spaces = () => {
                 </p>
               </div>
               
-              <Select defaultValue="recommended">
+              <Select value={sortOrder} onValueChange={setSortOrder}>
                 <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>
@@ -203,7 +262,7 @@ const Spaces = () => {
             
             {/* Results Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredSpaces.map((space) => {
+              {sortedSpaces.map((space) => {
                 const getBookingRoute = (type: string) => {
                   switch (type) {
                     case "Private Office":

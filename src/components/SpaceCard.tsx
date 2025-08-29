@@ -54,7 +54,7 @@ const SpaceCard = ({
   };
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
       <div className="aspect-video relative overflow-hidden">
         <img 
           src={image} 
@@ -62,17 +62,14 @@ const SpaceCard = ({
           className="w-full h-full object-cover"
         />
       </div>
-      
-      <CardContent className="p-6">
+      <CardContent className="p-6 flex flex-col flex-1">
         <div className="flex justify-between items-start mb-2">
           <div>
             <h3 className="text-xl font-semibold mb-1">{name}</h3>
             <p className="text-sm text-gray-600">${price}/hr</p>
           </div>
         </div>
-
         <p className="text-sm text-gray-600 mb-4 line-clamp-2">{description}</p>
-        
         <div className="flex flex-wrap gap-2 mb-4">
           {amenities.map((amenity) => (
             <Badge key={amenity} variant="secondary" className="flex items-center gap-1">
@@ -80,13 +77,15 @@ const SpaceCard = ({
             </Badge>
           ))}
         </div>
-        
-        <Button 
-          onClick={handleBookNow}
-          className="w-full bg-blue-500 hover:bg-blue-600 text-white"
-        >
-          Book Now
-        </Button>
+        <div className="mt-auto">
+          <Button 
+            onClick={handleBookNow}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white"
+          >
+            Book Now
+          </Button>
+        </div>
+  {/* Removed special Private Office footer. Only common footer will show on OfficeBooking page. */}
       </CardContent>
     </Card>
   );

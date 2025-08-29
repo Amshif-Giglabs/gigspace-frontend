@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,13 +44,23 @@ const OfficeBooking = () => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   const [mainImage, setMainImage] = useState<string>("");
   const [selectedSpace, setSelectedSpace] = useState<OfficeSpace | null>(null);
+  const [showAllSpaces, setShowAllSpaces] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Enquiry form state
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [numberOfSeats, setNumberOfSeats] = useState<number>(1);
   const [numberOfDays, setNumberOfDays] = useState<number>(30);
+
+  // Update duration when start or end date changes
+  useEffect(() => {
+    if (startDate && endDate) {
+      const diff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      setNumberOfDays(diff > 0 ? diff : 1);
+    }
+  }, [startDate, endDate]);
   const [contactName, setContactName] = useState<string>("");
   const [contactEmail, setContactEmail] = useState<string>("");
   const [contactPhone, setContactPhone] = useState<string>("");
@@ -192,6 +203,15 @@ const OfficeBooking = () => {
     return slots;
   };
 
+  // Booked slots for meeting rooms are always 10:00-11:00 and 14:00-15:00, regardless of date/selection
+  const isSlotBooked = (slot: BookingSlot) => {
+    if (selectedSpace && selectedSpace.name.toLowerCase().includes('meeting')) {
+      const hour = slot.startTime.getHours();
+      return hour === 10 || hour === 14;
+    }
+    return false;
+  };
+
   const isSlotSelected = (slot: BookingSlot) => {
     return selectedSlots.some(s =>
       s.startTime.getTime() === slot.startTime.getTime() &&
@@ -200,24 +220,42 @@ const OfficeBooking = () => {
   };
 
   const handleSlotClick = (slot: BookingSlot) => {
+    if (!selectedSpace) return;
+    if (isSlotBooked(slot)) return; // Prevent clicking booked slots
+    const isMeetingRoom = selectedSpace.name.toLowerCase().includes('meeting');
     if (isSlotSelected(slot)) {
       setSelectedSlots(selectedSlots.filter(s =>
         !(s.startTime.getTime() === slot.startTime.getTime() &&
           s.endTime.getTime() === slot.endTime.getTime())
       ));
     } else {
-      // For office spaces, only allow one slot selection at a time
-      setSelectedSlots([slot]);
+      if (isMeetingRoom) {
+        setSelectedSlots([...selectedSlots, slot]);
+      } else {
+        setSelectedSlots([slot]);
+      }
     }
   };
 
   const handleBookNow = () => {
-    if (selectedSlots.length === 0 || !selectedSpace) return;
-
-    const slot = selectedSlots[0];
-    toast({
-      title: "Office Space Booked!",
-      description: `You've booked ${selectedSpace.name} on ${format(selectedDate, 'PPP')} from ${format(slot.startTime, 'h:mm a')} to ${format(slot.endTime, 'h:mm a')}`,
+    if (selectedSlots.length === 0 || !selectedSpace) {
+      toast({
+        title: "Select a time slot",
+        description: "Please select at least one time slot to proceed to checkout.",
+        variant: "destructive"
+      });
+      return;
+    }
+    navigate('/cart', {
+      state: {
+        slots: selectedSlots.map(slot => ({
+          id: slot.id,
+          startTime: slot.startTime.toISOString(),
+          endTime: slot.endTime.toISOString()
+        })),
+        roomName: selectedSpace.name,
+        price: selectedSpace.price
+      }
     });
   };
 
@@ -243,51 +281,107 @@ const OfficeBooking = () => {
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Left Column: Office Images and Info */}
             <div className="lg:w-2/3 pr-0">
-              <div className="grid grid-cols-1 gap-6 w-full">
-                {/* Main Image Grid - 2 Big Images */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {officeSpaces.slice(0, 2).map((space, idx) => (
-                    <div
-                      key={idx}
-                      className="rounded-xl overflow-hidden bg-gray-100 cursor-pointer"
-                      onClick={() => {
-                        setSelectedSpace(space);
-                        setMainImage(space.image);
-                      }}
-                    >
-                      <img
-                        src={space.image}
-                        alt={space.name}
-                        className="w-full h-64 object-cover"
-                        loading="eager"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "/placeholder.svg";
-                        }}
-                      />
-                    </div>
-                  ))}
+              <div className="flex flex-col gap-6 w-full">
+
+                {/* Main Image Display */}
+                <div className="rounded-xl overflow-hidden bg-gray-100 mb-2">
+                  <img
+                    src={mainImage || selectedSpace.image}
+                    alt={selectedSpace.name}
+                    className="w-full h-80 object-cover"
+                    loading="eager"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = "/placeholder.svg";
+                    }}
+                  />
                 </div>
 
-                {/* Small Images Row - 3 Images */}
-                <div className="grid grid-cols-3 gap-4">
-                  {[selectedSpace.image, "/src/assets/coworking-space.jpg", "/src/assets/hero-workspace.jpg"].map((img, idx) => (
-                    <div
-                      key={idx}
-                      onClick={() => setMainImage(img)}
-                      className={`rounded-xl overflow-hidden bg-gray-100 cursor-pointer border-2 transition-colors ${mainImage === img ? 'border-primary' : 'border-transparent hover:border-gray-200'}`}
-                    >
-                      <img
-                        src={img}
-                        alt={`Preview ${idx + 1}`}
-                        className="w-full h-32 object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "/placeholder.svg";
-                        }}
-                      />
+                {/* Time Slots UI Example (add this where you render slots) */}
+                {selectedSpace.name.toLowerCase().includes('meeting') && (
+                  <>
+                    <div className="flex flex-wrap gap-2 my-4">
+                      {timeSlots().map(slot => (
+                        <button
+                          key={slot.id}
+                          onClick={() => handleSlotClick(slot)}
+                          disabled={isSlotBooked(slot)}
+                          className={`px-3 py-2 rounded-lg border text-xs font-medium
+                            ${isSlotBooked(slot)
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : isSlotSelected(slot)
+                                ? 'bg-primary text-white border-primary'
+                                : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'}
+                          `}
+                        >
+                          {format(slot.startTime, 'h:mm a')} - {format(slot.endTime, 'h:mm a')}
+                          {isSlotBooked(slot) && ' (Booked)'}
+                        </button>
+                      ))}
                     </div>
-                  ))}
+                    <Button
+                      className="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white"
+                      onClick={handleBookNow}
+                    >
+                      Proceed to Checkout
+                    </Button>
+                  </>
+                )}
+
+                {/* Thumbnails Row: show relevant images for each space type */}
+                <div className="flex gap-4">
+                  {(() => {
+                    let images: string[] = [selectedSpace.image];
+                    if (selectedSpace.name.toLowerCase().includes('meeting')) {
+                      images = [
+                        "/src/assets/meeting-room.jpg",
+                        "/src/assets/conference-room.jpg",
+                        "/src/assets/creative-studio.jpg"
+                      ];
+                    } else if (selectedSpace.name.toLowerCase().includes('coworking')) {
+                      images = [
+                        "/src/assets/coworking-space.jpg",
+                        "/src/assets/hero-workspace.jpg",
+                        "/src/assets/meeting-pod.jpg"
+                      ];
+                    } else if (selectedSpace.name.toLowerCase().includes('private')) {
+                      images = [
+                        "/src/assets/private-office.jpg",
+                        "/src/assets/meeting-room.jpg",
+                        "/src/assets/hero-workspace.jpg"
+                      ];
+                    } else if (selectedSpace.name.toLowerCase().includes('executive')) {
+                      images = [
+                        "/src/assets/coworking-space.jpg",
+                        "/src/assets/creative-studio.jpg",
+                        "/src/assets/conference-room.jpg"
+                      ];
+                    } else if (selectedSpace.name.toLowerCase().includes('team')) {
+                      images = [
+                        "/src/assets/hero-workspace.jpg",
+                        "/src/assets/meeting-pod.jpg",
+                        "/src/assets/meeting-room.jpg"
+                      ];
+                    }
+                    return images.map((img, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => setMainImage(img)}
+                        className={`rounded-xl overflow-hidden bg-gray-100 cursor-pointer border-2 transition-colors ${mainImage === img ? 'border-primary' : 'border-transparent hover:border-gray-200'}`}
+                        style={{ width: 96, height: 64 }}
+                      >
+                        <img
+                          src={img}
+                          alt={`Preview ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/placeholder.svg";
+                          }}
+                        />
+                      </div>
+                    ));
+                  })()}
                 </div>
 
                 {/* Office Info */}
@@ -489,6 +583,12 @@ const OfficeBooking = () => {
                             </div>
                           </div>
 
+                          {/* Duration Display */}
+                          {startDate && endDate && (
+                            <div className="mb-2 text-sm text-gray-700 font-medium">
+                              Duration: <span className="font-semibold">{numberOfDays} day{numberOfDays > 1 ? 's' : ''}</span>
+                            </div>
+                          )}
                           {/* Seats and Duration Row */}
                           <div className="grid grid-cols-1 gap-4">
                             <div>
@@ -627,55 +727,71 @@ const OfficeBooking = () => {
           <div className="mt-16">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-2xl font-semibold">More Office Spaces</h2>
-              <Button variant="outline">See More <ChevronRight className="h-4 w-4 ml-2" /></Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  window.location.href = '/spaces';
+                }}
+              >
+                See More <ChevronRight className="h-4 w-4 ml-2" />
+              </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {officeSpaces
-                .filter(space => space.id !== selectedSpace.id)
-                .map((space) => (
-                  <Card
-                    key={space.id}
-                    className="cursor-pointer hover:shadow-lg transition-shadow"
-                    onClick={() => {
-                      setSelectedSpace(space);
-                      setMainImage(space.image);
-                      setSelectedSlots([]);
-                    }}
-                  >
-                    <div className="h-48 overflow-hidden">
-                      <img
-                        src={space.image}
-                        alt={space.name}
-                        className="w-full h-full object-cover"
-                      />
+              {(showAllSpaces ? officeSpaces : officeSpaces.filter(space => space.id !== selectedSpace.id)).map((space) => (
+                <Card
+                  key={space.id}
+                  className="hover:shadow-lg transition-shadow flex flex-col justify-between"
+                >
+                  <div className="h-48 overflow-hidden cursor-pointer" onClick={() => {
+                    setSelectedSpace(space);
+                    setMainImage(space.image);
+                    setSelectedSlots([]);
+                  }}>
+                    <img
+                      src={space.image}
+                      alt={space.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <CardContent className="p-4 flex flex-col flex-1">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-semibold text-lg">{space.name}</h3>
+                      <div className="flex items-center bg-primary/10 text-primary px-2 py-1 rounded-md text-sm">
+                        <Star className="h-3 w-3 mr-1 fill-primary" />
+                        {space.rating}
+                      </div>
                     </div>
-                    <CardContent className="p-4">
-                      <div className="flex justify-between items-start">
-                        <h3 className="font-semibold text-lg">{space.name}</h3>
-                        <div className="flex items-center bg-primary/10 text-primary px-2 py-1 rounded-md text-sm">
-                          <Star className="h-3 w-3 mr-1 fill-primary" />
-                          {space.rating}
-                        </div>
+                    <p className="text-muted-foreground text-sm mt-1">${space.price}/month</p>
+                    <div className="flex items-center text-sm text-muted-foreground mt-2">
+                      <MapPin className="h-3.5 w-3.5 mr-1" />
+                      <span>{space.location}</span>
+                    </div>
+                    <div className="flex items-center justify-between mt-3 text-sm">
+                      <div className="flex items-center">
+                        <Users className="h-3.5 w-3.5 mr-1" />
+                        <span>{space.capacity}</span>
                       </div>
-                      <p className="text-muted-foreground text-sm mt-1">${space.price}/month</p>
-                      <div className="flex items-center text-sm text-muted-foreground mt-2">
-                        <MapPin className="h-3.5 w-3.5 mr-1" />
-                        <span>{space.location}</span>
-                      </div>
-                      <div className="flex items-center justify-between mt-3 text-sm">
-                        <div className="flex items-center">
-                          <Users className="h-3.5 w-3.5 mr-1" />
-                          <span>{space.capacity}</span>
-                        </div>
-                        <div className="text-green-600">{space.available} available</div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      <div className="text-green-600">{space.available} available</div>
+                    </div>
+                    <Button
+                      className="w-full mt-4 bg-blue-500 hover:bg-blue-600 text-white"
+                      onClick={() => {
+                        setSelectedSpace(space);
+                        setMainImage(space.image);
+                        setSelectedSlots([]);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                    >
+                      Book Now
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 };
