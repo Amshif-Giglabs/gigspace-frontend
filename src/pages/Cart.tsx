@@ -34,7 +34,8 @@ export default function CartPage() {
   const [email, setEmail] = useState('')
   const [showOtp, setShowOtp] = useState(false)
   const [otp, setOtp] = useState('')
-  const [invoiceOpen, setInvoiceOpen] = useState(true)
+  // Always show invoice (remove toggle)
+  // const [invoiceOpen, setInvoiceOpen] = useState(true)
 
   const subtotal = slots.length * price
   const tax = +(subtotal * 0.1).toFixed(2) // simple 10% tax
@@ -77,47 +78,37 @@ export default function CartPage() {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-medium">Invoice</h2>
-                  <button
-                    className="lg:hidden flex items-center gap-2 text-sm text-muted-foreground"
-                    onClick={() => setInvoiceOpen(v => !v)}
-                    aria-expanded={invoiceOpen}
-                  >
-                    {invoiceOpen ? <><ChevronUp className="h-4 w-4"/> Hide</> : <><ChevronDown className="h-4 w-4"/> Show</>}
-                  </button>
                 </div>
-
-                {invoiceOpen && (
-                  <div className="mt-4 space-y-4">
-                    {slots.length === 0 ? (
-                      <div className="text-sm text-muted-foreground">No items in cart. Select slots to book a room.</div>
-                    ) : (
-                      slots.map((s, i) => (
-                        <div key={s.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
-                          <div>
-                            <div className="font-medium">{roomName} <span className="text-xs text-muted-foreground">• {format(new Date(s.startTime), 'MMM d, yyyy')}</span></div>
-                            <div className="text-xs text-muted-foreground">{format(new Date(s.startTime), 'h:mm a')} – {format(new Date(s.endTime), 'h:mm a')}</div>
-                          </div>
-                          <div className="text-sm font-semibold">{currency(price)}</div>
+                <div className="mt-4 space-y-4">
+                  {slots.length === 0 ? (
+                    <div className="text-sm text-muted-foreground">No items in cart. Select slots to book a room.</div>
+                  ) : (
+                    slots.map((s, i) => (
+                      <div key={s.id} className="flex items-center justify-between p-3 rounded-md bg-muted/50">
+                        <div>
+                          <div className="font-medium">{roomName} <span className="text-xs text-muted-foreground">• {format(new Date(s.startTime), 'MMM d, yyyy')}</span></div>
+                          <div className="text-xs text-muted-foreground">{format(new Date(s.startTime), 'h:mm a')} – {format(new Date(s.endTime), 'h:mm a')}</div>
                         </div>
-                      ))
-                    )}
+                        <div className="text-sm font-semibold">{currency(price)}</div>
+                      </div>
+                    ))
+                  )}
 
-                    <div className="border-t pt-3">
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Subtotal</span>
-                        <span>{currency(subtotal)}</span>
-                      </div>
-                      <div className="flex justify-between text-sm text-muted-foreground">
-                        <span>Tax (10%)</span>
-                        <span>{currency(tax)}</span>
-                      </div>
-                      <div className="flex justify-between mt-2 text-base font-semibold">
-                        <span>Total</span>
-                        <span>{currency(total)}</span>
-                      </div>
+                  <div className="border-t pt-3">
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Subtotal</span>
+                      <span>{currency(subtotal)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm text-muted-foreground">
+                      <span>Tax (10%)</span>
+                      <span>{currency(tax)}</span>
+                    </div>
+                    <div className="flex justify-between mt-2 text-base font-semibold">
+                      <span>Total</span>
+                      <span>{currency(total)}</span>
                     </div>
                   </div>
-                )}
+                </div>
               </CardContent>
             </Card>
 
@@ -145,7 +136,13 @@ export default function CartPage() {
 
                     {!showOtp ? (
                       <div className="mt-3">
-                        <Button className="w-full" onClick={handleContinue} disabled={slots.length === 0}>Verify & Continue</Button>
+                        <Button
+                          className="w-full"
+                          onClick={handleContinue}
+                          disabled={slots.length === 0 || !name.trim() || !email.trim()}
+                        >
+                          Verify & Continue
+                        </Button>
                       </div>
                     ) : (
                       <div className="mt-3 space-y-2">
@@ -154,7 +151,11 @@ export default function CartPage() {
                           <Input value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="1234" />
                         </div>
                         <div className="flex gap-2">
-                          <Button className="flex-1" onClick={handleProceedToPay}>
+                          <Button
+                            className="flex-1"
+                            onClick={handleProceedToPay}
+                            disabled={otp.trim().length < 4}
+                          >
                             Pay {currency(total)}
                           </Button>
                           <Button variant="outline" className="flex-1" onClick={() => setShowOtp(false)}>Edit</Button>
@@ -191,7 +192,11 @@ export default function CartPage() {
                   </div>
 
                   <div className="mt-4">
-                    <Button className="w-full" onClick={() => { if (!showOtp) handleContinue(); else handleProceedToPay(); }} disabled={slots.length === 0}>
+                    <Button
+                      className="w-full"
+                      onClick={() => { if (!showOtp) handleContinue(); else handleProceedToPay(); }}
+                      disabled={slots.length === 0 || (!showOtp && (!name.trim() || !email.trim())) || (showOtp && otp.trim().length < 4)}
+                    >
                       {showOtp ? `Pay ${currency(total)}` : 'Checkout'}
                     </Button>
                   </div>
