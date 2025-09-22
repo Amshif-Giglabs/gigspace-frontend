@@ -39,13 +39,20 @@ const Contact = () => {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    const whatsappNumber = "919677689494";
+    const whatsappNumber = "919656597865";
     const messageText = `Hello! I'm ${formData.firstName} ${formData.lastName}.\n\nSubject: ${formData.subject}\n\nMessage: ${formData.message}\n\nContact Details:\nEmail: ${formData.email}\nPhone: ${formData.phone}`;
     const encodedMessage = encodeURIComponent(messageText);
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
   };
-  
+
+  // Function to handle WhatsApp Quick Support click
+  const handleWhatsAppSupport = () => {
+    const whatsappNumber = "919656597865";
+    const whatsappUrl = `https://wa.me/${whatsappNumber}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -62,7 +69,7 @@ const Contact = () => {
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
       </section>
-
+      
       <div className="container mx-auto px-4 py-12 md:py-16 lg:py-20">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-8 max-w-6xl mx-auto">
           {/* Contact Information - Left Side */}
@@ -82,8 +89,12 @@ const Contact = () => {
                   </div>
                 </CardContent>
               </Card>
-
-              <Card className="group hover:shadow-md transition-all duration-200 border border-gray-200 bg-white">
+              
+              {/* WhatsApp Quick Support - Now Clickable */}
+              <Card 
+                className="group hover:shadow-md transition-all duration-200 border border-gray-200 bg-white cursor-pointer hover:bg-blue-50/30 active:scale-[0.98]"
+                onClick={handleWhatsAppSupport}
+              >
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
                     <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-colors">
@@ -96,7 +107,7 @@ const Contact = () => {
                   </div>
                 </CardContent>
               </Card>
-
+              
               <Card className="group hover:shadow-md transition-all duration-200 border border-gray-200 bg-white">
                 <CardContent className="p-6">
                   <div className="flex items-center space-x-4">
@@ -111,7 +122,7 @@ const Contact = () => {
                 </CardContent>
               </Card>
             </div>
-
+            
             {/* Location & Map */}
             <Card className="border border-gray-200 bg-white">
               <CardContent className="p-6">

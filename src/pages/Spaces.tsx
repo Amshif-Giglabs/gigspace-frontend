@@ -1,144 +1,71 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Badge } from "@/components/ui/badge";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SpaceCard from "@/components/SpaceCard";
 import { useScrollToTop } from "@/hooks/use-scroll-to-top";
 import { 
   Filter, 
-  Search,
-  Calendar as CalendarIcon
+  Search
 } from "lucide-react";
-import { Calendar } from "@/components/ui/calendar";
-import coworkingImage from "@/assets/coworking-space.jpg";
-import privateOfficeImage from "@/assets/private-office.jpg";
-import meetingRoomImage from "@/assets/meeting-room.jpg";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { getAssets } from "@/api/assets";
+import type { Asset } from "@/types/types";
 
 const Spaces = () => {
-  // Scroll to top when component mounts
   useScrollToTop();
   
   const navigate = useNavigate();
-  const [priceRange] = useState([0, 200]);
+  const [priceRange] = useState([0, 100000]);
   const [searchParams] = useSearchParams();
-  const [spaceType, setSpaceType] = useState(searchParams.get('type') || "");
-  const [capacity, setCapacity] = useState("");
-  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') || "");
-  const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const allSpaces = [
-    {
-      id: "1",
-      name: "Private Office",
-      type: "Private Office",
-      image: privateOfficeImage,
-      location: "Downtown Financial District",
-      capacity: 4,
-      price: 75,
-      rating: 4.8,
-      reviews: 124,
-      amenities: ["High-speed WiFi", "Coffee & Refreshments", "Printer Access"],
-      description: "Premium private office space perfect for executives and small teams with all amenities included."
-    },
-    {
-      id: "2",
-      name: "Meeting Room",
-      type: "Meeting Room",
-      image: meetingRoomImage,
-      location: "Tech District",
-      capacity: 12,
-      price: 120,
-      rating: 4.9,
-      reviews: 87,
-      amenities: ["Video Conferencing", "Whiteboard", "High-speed WiFi"],
-      description: "Fully-equipped meeting space designed for presentations and team collaborations with advanced AV capabilities."
-    },
-    {
-      id: "3",
-      name: "Coworking Space",
-      type: "Coworking",
-      image: coworkingImage,
-      location: "Creative Quarter",
-      capacity: 1,
-      price: 25,
-      rating: 4.7,
-      reviews: 52,
-      amenities: ["High-speed WiFi", "Coffee & Refreshments", "Networking"],
-      description: "Flexible workspace in our vibrant coworking area perfect for freelancers and digital nomads seeking community."
-    },
-    {
-      id: "4",
-      name: "Meeting Room",
-      type: "Meeting Room",
-      image: meetingRoomImage,
-      location: "Innovation Hub",
-      capacity: 8,
-      price: 95,
-      rating: 4.6,
-      reviews: 34,
-      amenities: ["Video Conferencing", "Whiteboard", "High-speed WiFi"],
-      description: "Modern meeting space with state-of-the-art technology for brainstorming and collaborative work sessions."
-    },
-    {
-      id: "5",
-      name: "Private Office",
-      type: "Private Office",
-      image: privateOfficeImage,
-      location: "Arts District",
-      capacity: 6,
-      price: 85,
-      rating: 4.5,
-      reviews: 67,
-      amenities: ["High-speed WiFi", "Coffee & Refreshments", "Natural Light"],
-      description: "Inspiring workspace with abundant natural light and creative atmosphere, perfect for design teams and startups."
-    },
-    {
-      id: "6",
-      name: "Coworking Space",
-      type: "Coworking",
-      image: coworkingImage,
-      location: "Business Park",
-      capacity: 1,
-      price: 20,
-      rating: 4.4,
-      reviews: 89,
-      amenities: ["High-speed WiFi", "Coffee & Refreshments", "Printing"],
-      description: "Affordable coworking space in a professional environment with networking opportunities and modern facilities."
-    }
-  ];
-
-  useEffect(() => {
-    const type = searchParams.get('type');
-    const date = searchParams.get('date');
-    
-    if (type) setSpaceType(type);
-    if (date) setSelectedDate(date);
-  }, [searchParams]);
+  // 🔥 CHANGE: read `asset_type` instead of `type`
+  const [spaceType, setSpaceType] = useState(searchParams.get("asset_type") || "all-types");
+  
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [sortOrder, setSortOrder] = useState("recommended");
 
-  const filteredSpaces = allSpaces.filter(space => {
-    const matchesType = spaceType === "all-types" || !spaceType || space.type === spaceType;
-    const matchesCapacity = capacity === "any-size" || !capacity || space.capacity >= parseInt(capacity);
-    const matchesPrice = space.price >= priceRange[0] && space.price <= priceRange[1];
-    let matchesDate = true;
-    if (selectedDate) {
-      matchesDate = true;
-    }
-    return matchesType && matchesCapacity && matchesPrice && matchesDate;
+  // Fetch spaces from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const typeParam =
+          spaceType && spaceType !== "all-types" ? spaceType : undefined;
+        const response = await getAssets(undefined, undefined, typeParam);
+        setAssets(response.assets);
+        setError(null);
+      } catch (err) {
+        console.error("Failed to fetch assets", err);
+        setError("Failed to load spaces");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [spaceType]);
+
+  const filteredSpaces = assets.filter((space) => {
+    const matchesType =
+      spaceType === "all-types" || !spaceType || space.asset_type === spaceType;
+
+    const price = Number(space.base_price);
+    const matchesPrice = price >= priceRange[0] && price <= priceRange[1];
+    return matchesType && matchesPrice;
   });
 
   const sortedSpaces = [...filteredSpaces].sort((a, b) => {
-    if (sortOrder === "price-low") return a.price - b.price;
-    if (sortOrder === "price-high") return b.price - a.price;
-    if (sortOrder === "rating") return b.rating - a.rating;
-    return 0; // recommended (default order)
+    const priceA = Number(a.base_price);
+    const priceB = Number(b.base_price);
+    if (sortOrder === "price-low") return priceA - priceB;
+    if (sortOrder === "price-high") return priceB - priceA;
+    return 0;
   });
 
   return (
@@ -159,69 +86,28 @@ const Spaces = () => {
           <Card className="max-w-4xl mx-auto">
             <CardContent className="p-6">
               <div className="flex flex-col sm:flex-row gap-4 w-full">
-                <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="flex-1 grid gap-4 grid-cols-1 sm:grid-cols-2">
                   <Select value={spaceType} onValueChange={setSpaceType}>
                     <SelectTrigger>
                       <SelectValue placeholder="Space Type" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all-types">All Types</SelectItem>
-                      <SelectItem value="Private Office">Private Office</SelectItem>
-                      <SelectItem value="Coworking">Coworking</SelectItem>
-                      <SelectItem value="Meeting Room">Meeting Room</SelectItem>
+                      {/* 🔥 CHANGE: dropdown values aligned with backend */}
+                      <SelectItem value="private_office">Private Office</SelectItem>
+                      <SelectItem value="co_working">Co-working</SelectItem>
+                      <SelectItem value="meeting_room">Meeting Room</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Select value={capacity} onValueChange={setCapacity}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Capacity" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="any-size">Any Size</SelectItem>
-                      <SelectItem value="1">1+ People</SelectItem>
-                      <SelectItem value="4">4+ People</SelectItem>
-                      <SelectItem value="8">8+ People</SelectItem>
-                      <SelectItem value="12">12+ People</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  
-                  <div className="relative">
-                    <button
-                      type="button"
-                      className={`w-full flex items-center border rounded px-3 py-2 bg-background text-left font-normal ${!selectedDate ? 'text-muted-foreground' : ''}`}
-                      onClick={() => setShowDatePicker(!showDatePicker)}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {selectedDate ?
-                        new Date(selectedDate).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        }) :
-                        'Select Date'}
-                    </button>
-                    {showDatePicker && (
-                      <div className="absolute z-10 mt-1 bg-white border rounded-md shadow-lg min-w-[260px] max-w-[320px] w-max overflow-auto">
-                        <Calendar
-                          mode="single"
-                          selected={selectedDate ? new Date(selectedDate) : undefined}
-                          onSelect={date => {
-                            setSelectedDate(date ? date.toISOString().split('T')[0] : "");
-                            setShowDatePicker(false);
-                          }}
-                          disabled={date => date < new Date(new Date().toDateString())}
-                        />
-                      </div>
-                    )}
-                  </div>
                 </div>
                 <Button 
                   className="w-full sm:w-auto"
                   onClick={() => {
                     const params = new URLSearchParams();
-                    if (spaceType) params.set('type', spaceType);
-                    if (selectedDate) params.set('date', selectedDate);
-                    if (capacity) params.set('capacity', capacity);
-                    
+                    if (spaceType && spaceType !== "all-types") {
+                      // 🔥 CHANGE: use `asset_type`
+                      params.set("asset_type", spaceType);
+                    }
                     navigate(`/spaces?${params.toString()}`);
                   }}
                 >
@@ -236,75 +122,66 @@ const Spaces = () => {
 
       <div className="container mx-auto px-4 py-8">
         <div>
-          {/* Results */}
-          <div>
-            {/* Results Header */}
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              <div>
-                <h2 className="text-2xl font-bold mb-1">Available Spaces</h2>
-                <p className="text-muted-foreground">
-                  {filteredSpaces.length} space{filteredSpaces.length !== 1 ? 's' : ''} found
-                </p>
-              </div>
-              
-              <Select value={sortOrder} onValueChange={setSortOrder}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="recommended">Recommended</SelectItem>
-                  <SelectItem value="price-low">Price: Low to High</SelectItem>
-                  <SelectItem value="price-high">Price: High to Low</SelectItem>
-                  <SelectItem value="rating">Highest Rated</SelectItem>
-                </SelectContent>
-              </Select>
+          {/* Results Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+            <div>
+              <h2 className="text-2xl font-bold mb-1">Available Spaces</h2>
+              <p className="text-muted-foreground">
+                {loading
+                  ? "Loading..."
+                  : `${filteredSpaces.length} space${filteredSpaces.length !== 1 ? "s" : ""} found`}
+              </p>
             </div>
             
-            {/* Results Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-              {sortedSpaces.map((space) => {
-                const getBookingRoute = (type: string) => {
-                  switch (type) {
-                    case "Private Office":
-                      return "/office-booking";
-                    case "Coworking":
-                      return "/coworking";
-                    case "Meeting Room":
-                      return "/meeting-rooms";
-                    default:
-                      return "/spaces";
-                  }
-                };
-
-                return (
-                  <SpaceCard 
-                    key={space.id} 
-                    {...space} 
-                    onClick={() => navigate(getBookingRoute(space.type))}
-                  />
-                );
-              })}
-            </div>
-            
-            {filteredSpaces.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-muted-foreground mb-4">
-                  <Filter className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <h3 className="text-lg font-medium mb-2">No spaces found</h3>
-                  <p>Try adjusting your filters or search criteria</p>
-                </div>
-                <Button 
-                  variant="outline" 
-                  onClick={() => {
-                    setSpaceType("");
-                    setCapacity("");
-                  }}
-                >
-                  Clear All Filters
-                </Button>
-              </div>
-            )}
+            <Select value={sortOrder} onValueChange={setSortOrder}>
+              <SelectTrigger className="w-40">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="recommended">Recommended</SelectItem>
+                <SelectItem value="price-low">Price: Low to High</SelectItem>
+                <SelectItem value="price-high">Price: High to Low</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+          
+          {/* Results Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {error && <p className="text-red-500">{error}</p>}
+            {!loading && !error && sortedSpaces.map((space) => (
+              <SpaceCard
+                key={space.id}
+                id={space.id}
+                name={space.name}
+                type={space.asset_type}
+                currency={space.currency_symbol}
+                image={space.primary_image_url || undefined}
+                city={space.city_name || "Unknown"}
+                capacity={Number(space.seat_capacity)}
+                price={Number(space.base_price)}
+                description={space.description}
+              />
+            ))}
+          </div>
+          
+          {!loading && !error && filteredSpaces.length === 0 && (
+            <div className="text-center py-12">
+              <div className="text-muted-foreground mb-4">
+                <Filter className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <h3 className="text-lg font-medium mb-2">No spaces found</h3>
+                <p>Try adjusting your filters or search criteria</p>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setSpaceType("all-types");
+                  navigate("/spaces"); // 🔥 CHANGE: reset filters
+                }}
+              >
+                Clear All Filters
+              </Button>
+            </div>
+          )}
         </div>
       </div>
       

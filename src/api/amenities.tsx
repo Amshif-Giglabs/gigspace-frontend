@@ -62,6 +62,25 @@ export const addSpaceAmenities = async (asset_id:string,amenities:any) => {
 };
 
 
+export const deleteSpaceAmenity = async (asset_id:string,amenity_id:any) => {
+  try {
+    const response = await fetch(`${BASE_URL}/assets/${asset_id}/amenities/${amenity_id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Token": `${getAuthToken()}`,
+      }});
+    if (!response.ok) {
+      throw new Error(`Failed to delete amenity: ${response.status}`);
+    }
+    return true;
+  } catch (err) {
+    console.error("Error deleting amenity:", err);
+    throw new Error("Failed to delete amenity");
+  }
+};
+
+
 export const getAmenity = async (amenityId: number): Promise<Amenity> => {
   try {
     const response = await fetch(`${BASE_URL}/amenities/${amenityId}`);

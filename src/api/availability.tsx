@@ -2,8 +2,7 @@ import { BASE_URL } from "@/constants";
 import { AvailabilitySchedule } from "@/types/types";
 import { getAuthToken } from "@/util/auth";
 
-const convertSlotsToApiFormat = (assetId: string,scheduleData:any) => {
-
+const convertSlotsToApiFormat = (assetId: string, scheduleData: any[]) => {
   const dayMap: Record<string, number> = {
     sunday: 0,
     monday: 1,
@@ -14,28 +13,22 @@ const convertSlotsToApiFormat = (assetId: string,scheduleData:any) => {
     saturday: 6,
   };
 
-  return scheduleData.flatMap((slot) =>
-    slot.slots.map((encoded: string) => {
-      const parts = encoded.split("|");
-      const day = parts[0];
-      const timeRange = parts[1];
-      const duration = parts[2] ? parseInt(parts[2], 10) : null;
-
-      const [startStr, endStr] = timeRange.split("-");
-
+  return scheduleData
+    .filter((slot) => slot.enabled) // only enabled
+    .map((slot) => {
       return {
         asset_id: assetId,
-        day_of_week: dayMap[day],
-        slot_duration: slot.type === "hourly" ? duration : null,
-        slot_type: slot.type,
-        start_time: startStr + ":00", // convert "09:00" → "09:00:00"
-        end_time: endStr + ":00",
+        day_of_week: dayMap[slot.day],         // e.g. "monday" → 1
+        slot_duration: slot.slot_type === "hourly" ? slot.duration : 1,
+        slot_type: slot.slot_type,
+        start_time: `${slot.start}:00`,        // "03:00" → "03:00:00"
+        end_time: `${slot.end}:00`,
         created_by: "550e8400-e29b-41d4-a716-446655440001",
         updated_by: "550e8400-e29b-41d4-a716-446655440001",
       };
-    })
-  );
+    });
 };
+
 
 
 
@@ -119,6 +112,34 @@ export const createAvailabilitySchedule = async (asset_id:string,scheduleData)=>
   }
 };
 
+export const createAvailabilityDay = async (asset_id:string,scheduleData: {
+  day_of_week?: number;
+  slot_duration?: number;
+  slot_type?: string;
+  start_time?: string;
+  end_time?: string;
+  updated_by: string;
+})=> {
+  try {
+    const response = await fetch(`${BASE_URL}/availability_schedule/create`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Token": `${getAuthToken()}`,
+      },
+      body: JSON.stringify({...scheduleData,asset_id,created_by:'550e8400-e29b-41d4-a716-446655440001'}),//hardcoded
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to create availability day: ${response.status}`);
+    }
+    const schedule = await response.json();
+    return schedule
+  } catch (err) {
+    console.error("Error creating availability day:", err);
+    throw new Error("Failed to create availability day");
+  }
+};
+
 export const updateAvailabilitySchedule = async (availabilityId: string, scheduleData: {
   day_of_week?: number;
   slot_duration?: number;
@@ -132,7 +153,7 @@ export const updateAvailabilitySchedule = async (availabilityId: string, schedul
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
-        // "Access-Token": `${getAuthToken()}`,
+        "Access-Token": `${getAuthToken()}`,
       },
       body: JSON.stringify(scheduleData),
     });
@@ -140,19 +161,7 @@ export const updateAvailabilitySchedule = async (availabilityId: string, schedul
       throw new Error(`Failed to update availability schedule: ${response.status}`);
     }
     const schedule = await response.json();
-    return {
-      id: schedule.id.toString(),
-      asset_id: schedule.asset_id.toString(),
-      day_of_week: schedule.day_of_week,
-      slot_duration: schedule.slot_duration,
-      slot_type: schedule.slot_type,
-      start_time: schedule.start_time,
-      end_time: schedule.end_time,
-      created_by: schedule.created_by.toString(),
-      updated_by: schedule.updated_by?.toString() || null,
-      created_at: schedule.created_at,
-      updated_at: schedule.updated_at,
-    };
+    return schedule
   } catch (err) {
     console.error(`Error updating availability schedule ${availabilityId}:`, err);
     throw new Error("Failed to update availability schedule");
@@ -164,7 +173,7 @@ export const deleteAvailabilitySchedule = async (availabilityId: string): Promis
     const response = await fetch(`${BASE_URL}/availability_schedule/${availabilityId}`, {
       method: "DELETE",
       headers: {
-        // "Access-Token": `${getAuthToken()}`,
+        "Access-Token": `${getAuthToken()}`,
       },
     });
     if (!response.ok) {

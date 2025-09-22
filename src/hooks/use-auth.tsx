@@ -1,4 +1,6 @@
 import { useState, useEffect } from "react";
+import { Cookies } from "react-cookie";
+import { useNavigate } from "react-router-dom";
 
 export interface AuthState {
   isLoggedIn: boolean;
@@ -6,6 +8,7 @@ export interface AuthState {
 }
 
 export const useAuth = () => {
+  const navigate = useNavigate();
   const [authState, setAuthState] = useState<AuthState>({
     isLoggedIn: false,
     username: "",
@@ -38,12 +41,21 @@ export const useAuth = () => {
     localStorage.removeItem("isLoggedIn");
     localStorage.removeItem("username");
     localStorage.removeItem("isAdmin");
+    localStorage.removeItem("authToken");
+    localStorage.removeItem("access_token");
+
+    const cookies = new Cookies();
+    cookies.remove("access_token", { path: "/" });
     setAuthState({ isLoggedIn: false, username: "" });
+
+    // Redirect to home and replace history to prevent going back
+    navigate("/", { replace: true });
   };
 
   return {
     ...authState,
     login,
     logout,
+    setAuthState, // Expose for external updates if needed
   };
 };

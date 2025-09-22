@@ -95,6 +95,7 @@ export default function BookSpace() {
               type="Private Office"
               image={privateOfficeImage}
               location="Downtown"
+              capacity={4}
               price={75}
               description="Premium private office space perfect for executives and small teams seeking a professional environment."
               amenities={["High-speed WiFi", "Coffee & Refreshments"]}
@@ -105,6 +106,7 @@ export default function BookSpace() {
               type="Meeting Room"
               image={meetingRoomImage}
               location="Downtown"
+              capacity={12}
               price={120}
               description="Fully equipped meeting space designed for presentations, client meetings, and team collaborations."
               amenities={["Video Conferencing", "Whiteboard"]}
@@ -115,6 +117,7 @@ export default function BookSpace() {
               type="Coworking"
               image={coworkingImage}
               location="Tech Hub"
+              capacity={1}
               price={25}
               description="Flexible workspace in our vibrant coworking area. Perfect for freelancers and remote workers."
               amenities={["High-speed WiFi", "Coffee & Refreshments"]}
@@ -125,6 +128,7 @@ export default function BookSpace() {
               type="Studio"
               image={privateOfficeImage}
               location="Arts District"
+              capacity={8}
               price={95}
               description="Inspiring space designed for creative teams, photoshoots, workshops, and collaborative projects."
               amenities={["High-speed WiFi", "Video Conferencing"]}
@@ -135,6 +139,7 @@ export default function BookSpace() {
               type="Office"
               image={privateOfficeImage}
               location="Business District"
+              capacity={6}
               price={85}
               description="Quiet, dedicated office space for focused work and private meetings. Includes desk and ergonomic chair."
               amenities={["High-speed WiFi", "Printer Access"]}
@@ -145,6 +150,7 @@ export default function BookSpace() {
               type="Meeting Pod"
               image={meetingRoomImage}
               location="Innovation Hub"
+              capacity={4}
               price={45}
               description="Comfortable, informal meeting space ideal for brainstorming sessions and team catchups."
               amenities={["Video Conferencing", "Whiteboard"]}

@@ -22,7 +22,7 @@ const Header = () => {
     { href: "/", label: "Home", ariaLabel: "Home page" },
     { href: "/spaces", label: "WorkSpaces", ariaLabel: "View and book workspaces" },
     { href: "/about", label: "About Us", ariaLabel: "About us" },
-    { href: "/contact", label: "Contact", ariaLabel: "Contact us" },
+    { href: "/contact", label: "Contact Us", ariaLabel: "Contact us" },
   ];
 
   return (
@@ -77,7 +77,7 @@ const Header = () => {
                 <div className="pt-4 border-t">
                   <div className="flex items-center space-x-2 text-sm text-muted-foreground mb-4">
                     <Phone className="h-4 w-4" />
-                    <span>(555) 123-4567</span>
+                    {/* <span>(555) 123-4567</span> */}
                   </div>
                   {isLoggedIn ? (
                     <div className="space-y-2">
@@ -108,7 +108,7 @@ const Header = () => {
         <div className="hidden md:flex items-center space-x-4">
           <div className="hidden lg:flex items-center space-x-2 text-sm text-muted-foreground">
             <Phone className="h-4 w-4" />
-            <span>(555) 123-4567</span>
+            {/* <span>(555) 123-4567</span> */}
           </div>
           {isLoggedIn ? (
             <div className="flex items-center space-x-3">
@@ -128,7 +128,7 @@ const Header = () => {
           ) : (
             <Link to="/login">
               <Button className="bg-blue-500 hover:bg-blue-600">
-                Sign up
+                Sign In
               </Button>
             </Link>
           )}

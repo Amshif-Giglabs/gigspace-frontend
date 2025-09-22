@@ -1,3 +1,5 @@
+export type SlotType = "daily" | "hourly";
+
 export interface User {
   id: string;
   user_type: 'admin' | 'nonadmin';
@@ -43,22 +45,24 @@ export interface SpaceAssetUnavailabilityDate {
 }
 
 export interface Booking {
-  id: string;
-  space_asset_id: string;
-  contact_number: string;
-  start_date_time: string;
-  end_date_time: string;
-  status: 'pending' | 'confirmed' | 'cancelled';
-  payment_status: 'pending' | 'paid' | 'failed';
-  tax_amount: number;
-  price: number;
-  discount_applied: number;
-  discount_id?: string | null;
-  created_by: string;
-  updated_by?: string | null;
-  created_at: string;
-  updated_at: string;
+  id: string;                  // booking ID
+  space_asset_id: string;      // linked asset
+  contact_number: string;      // user’s phone number
+  start_date_time: string;     // ISO datetime
+  end_date_time: string;       // ISO datetime
+  status: string;      // ✅ renamed (instead of status)
+  payment_status: string;      // pending, paid, failed, etc.
+  tax_amount: number;          // numeric
+  price: number;               // numeric
+  discount_applied: number;    // numeric, default 0
+  discount_id: string | null;  // nullable FK
+  created_by: string | null;   // user ID or null
+  updated_by: string | null;   // user ID or null
+  created_at: string;          // ISO timestamp
+  updated_at: string;         // ISO timestamp
+  asset_name: string | null;   // Added to hold asset name in responses
 }
+
 
 export interface AvailabilitySchedule {
   id: string;
@@ -78,12 +82,17 @@ export interface Asset {
   id: string;
   tenant_id: string;
   name: string;
-  asset_type: 'meeting_room' | 'hall' | 'auditorium' | 'workspace';
-  city_id?: string | null;
+  asset_type: 'meeting_room' | 'co_working' | 'private_office' | 'workspace';
+  city_id: string | null;
+  city_name?: string | null; // Added to hold city name in responses
   seat_capacity: string;
   description: string;
   base_price: string;
   currency_id: string;
+  currency_symbol?: string;
+  amenities?:any[];
+  images?:any[];
+  primary_image_url?: string | null;
   status: 'available' | 'maintenance' | 'unavailable';
   created_by?: string | null;
   updated_by?: string | null;
